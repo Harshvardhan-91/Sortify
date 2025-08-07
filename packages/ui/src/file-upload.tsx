@@ -4,7 +4,7 @@ import { Upload, File, X, Check, AlertCircle } from 'lucide-react';
 import { cn } from './utils';
 
 interface FileUploadProps {
-  onUpload?: (files: File[]) => void;
+  onUpload?: (files: globalThis.File[]) => void;
   maxFiles?: number;
   maxSize?: number;
   accept?: Record<string, string[]>;
@@ -13,7 +13,7 @@ interface FileUploadProps {
 }
 
 interface UploadedFile {
-  file: File;
+  file: globalThis.File;
   id: string;
   status: 'uploading' | 'success' | 'error';
   progress: number;
@@ -36,7 +36,7 @@ export function FileUpload({
 }: FileUploadProps) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
 
-  const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
+  const onDrop = useCallback((acceptedFiles: globalThis.File[]) => {
     // Add accepted files to upload queue
     const newFiles = acceptedFiles.map(file => ({
       file,
