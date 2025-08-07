@@ -1,0 +1,105 @@
+# Sortify - AI-Powered Cloud Storage
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: sortify_postgres
+    environment:
+      POSTGRES_DB: sortify_db
+      POSTGRES_USER: sortify_user
+      POSTGRES_PASSWORD: sortify_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - sortify_network
+
+  # Redis for Queue Management
+  redis:
+    image: redis:7-alpine
+    container_name: sortify_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - sortify_network
+    command: redis-server --appendonly yes
+
+  # Backend API Server
+  backend:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    container_name: sortify_backend
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://sortify_user:sortify_password@postgres:5432/sortify_db
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your-super-secret-jwt-key
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_CLOUD_VISION_API_KEY=${GOOGLE_CLOUD_VISION_API_KEY}
+      - FRONTEND_URL=http://localhost:3001
+      - PORT=3002
+    ports:
+      - "3002:3002"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - sortify_network
+    restart: unless-stopped
+
+  # AI Processing Workers
+  worker:
+    build:
+      context: .
+      dockerfile: packages/workers/Dockerfile
+    container_name: sortify_worker
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://sortify_user:sortify_password@postgres:5432/sortify_db
+      - REDIS_URL=redis://redis:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_CLOUD_VISION_API_KEY=${GOOGLE_CLOUD_VISION_API_KEY}
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    depends_on:
+      - postgres
+      - redis
+      - backend
+    networks:
+      - sortify_network
+    restart: unless-stopped
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: sortify_frontend
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:3002
+    ports:
+      - "3001:3001"
+    depends_on:
+      - backend
+    networks:
+      - sortify_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  sortify_network:
+    driver: bridge

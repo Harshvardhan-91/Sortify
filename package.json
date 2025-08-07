@@ -1,12 +1,18 @@
 {
-  "name": "with-tailwind",
+  "name": "sortify",
   "private": true,
+  "description": "AI-Powered Personal Cloud Storage System",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "check-types": "turbo run check-types",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "db:generate": "turbo run db:generate",
+    "db:migrate": "turbo run db:migrate",
+    "db:studio": "turbo run db:studio",
+    "db:seed": "turbo run db:seed",
+    "worker": "turbo run worker"
   },
   "devDependencies": {
     "prettier": "^3.6.0",
