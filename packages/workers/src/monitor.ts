@@ -33,22 +33,12 @@ export class QueueMonitor {
   static async printStats() {
     const stats = await this.getStats();
     
-    console.log('\n📊 Queue Statistics:');
-    console.log('===================');
     
-    for (const [queueKey, queueStats] of Object.entries(stats)) {
-      console.log(`\n📋 ${queueStats.name}:`);
-      console.log(`   ⏳ Waiting: ${queueStats.waiting}`);
-      console.log(`   🔄 Active: ${queueStats.active}`);
-      console.log(`   ✅ Completed: ${queueStats.completed}`);
-      console.log(`   ❌ Failed: ${queueStats.failed}`);
-      console.log(`   📦 Total: ${queueStats.totalJobs}`);
-    }
-    console.log('\n===================\n');
+    
   }
 
   static startMonitoring(intervalMs: number = 30000) {
-    console.log(`📈 Starting queue monitoring (every ${intervalMs/1000}s)...`);
+    console.log(`tarting queue monitoring (every ${intervalMs/1000}s)...`);
     
     setInterval(async () => {
       try {

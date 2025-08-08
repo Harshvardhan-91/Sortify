@@ -26,18 +26,18 @@ class AIProcessor {
     });
 
     this.worker.on('completed', (job) => {
-      console.log(`✅ AI processing completed for job ${job.id}`);
+      console.log(`AI processing completed for job ${job.id}`);
     });
 
     this.worker.on('failed', (job, err) => {
-      console.error(`❌ AI processing failed for job ${job?.id}:`, err.message);
+      console.error(`AI processing failed for job ${job?.id}:`, err.message);
     });
   }
 
   async processFile(job: any) {
     const { fileId, filePath, mimeType, userId }: AIJobData = job.data;
     
-    console.log(`🧠 Starting AI processing for file: ${fileId}`);
+    console.log(`Starting AI processing for file: ${fileId}`);
 
     try {
       // Update processing status
@@ -81,10 +81,10 @@ class AIProcessor {
         }
       });
 
-      console.log(`✅ AI processing completed for file: ${fileId}`);
+      console.log(`AI processing completed for file: ${fileId}`);
       
     } catch (error) {
-      console.error(`❌ AI processing failed for file ${fileId}:`, error);
+      console.error(` AI processing failed for file ${fileId}:`, error);
       
       await prisma.file.update({
         where: { id: fileId },
@@ -233,7 +233,7 @@ const processor = new AIProcessor();
 
 // Handle graceful shutdown
 process.on('SIGTERM', async () => {
-  console.log('🛑 Shutting down AI processor...');
+  console.log('Shutting down AI processor...');
   await processor.close();
   process.exit(0);
 });
