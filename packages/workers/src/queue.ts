@@ -3,8 +3,7 @@ import Redis from 'ioredis';
 
 // Redis connection
 const connection = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
-  maxRetriesPerRequest: 3,
-  retryDelayOnFailover: 100,
+  maxRetriesPerRequest: null, // Required for BullMQ
 });
 
 // AI Processing Queue
