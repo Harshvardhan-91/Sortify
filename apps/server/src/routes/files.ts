@@ -3,7 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
 import { prisma } from '@repo/db';
-import { addAIProcessingJob } from '@repo/workers';
+import { addAIProcessingJob, QueueMonitor } from '@repo/workers';
 import crypto from 'crypto';
 
 const router = Router();
@@ -412,6 +412,26 @@ router.patch('/:fileId', authenticateToken, async (req: any, res) => {
   } catch (error) {
     console.error('Update file error:', error);
     res.status(500).json({ error: 'Update failed' });
+  }
+});
+
+// Get queue status
+router.get('/queue-status', async (req, res) => {
+  try {
+    const stats = await QueueMonitor.getStats();
+    res.json({
+      success: true,
+      queues: stats
+    });
+  } catch (error) {
+    console.error('Queue status error:', error);
+    res.status(500).json({ 
+      error: 'Failed to get queue status',
+      queues: {
+        aiQueue: { name: 'AI Processing', error: 'Connection failed' },
+        cleanupQueue: { name: 'File Cleanup', error: 'Connection failed' }
+      }
+    });
   }
 });
 
