@@ -13,20 +13,20 @@
     "worker": "tsx src/workers/ai-processor.ts"
   },
   "dependencies": {
+    "@google-cloud/vision": "^4.3.2",
     "@repo/db": "*",
     "bullmq": "^5.36.2",
+    "dotenv": "^16.4.7",
+    "fs-extra": "^11.2.0",
     "ioredis": "^5.4.1",
     "openai": "^4.73.1",
-    "@google-cloud/vision": "^4.3.2",
     "pdf-parse": "^1.1.1",
-    "sharp": "^0.33.5",
-    "dotenv": "^16.4.7",
-    "fs-extra": "^11.2.0"
+    "sharp": "^0.33.5"
   },
   "devDependencies": {
     "@repo/typescript-config": "*",
-    "@types/node": "^22.15.30",
     "@types/fs-extra": "^11.0.4",
+    "@types/node": "^22.15.30",
     "tsx": "^4.19.2",
     "typescript": "5.8.2"
   }

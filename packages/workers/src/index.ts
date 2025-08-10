@@ -5,6 +5,9 @@ import { QueueMonitor } from './monitor.js';
 // Load environment variables
 dotenv.config();
 
+// Export functions for use by backend
+export { addAIProcessingJob, addCleanupJob, aiQueue, cleanupQueue } from './queue.js';
+export { QueueMonitor } from './monitor.js';
 
 // Start queue monitoring (every 30 seconds)
 QueueMonitor.startMonitoring(30000);

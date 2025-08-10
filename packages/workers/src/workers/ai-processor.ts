@@ -22,7 +22,7 @@ class AIProcessor {
   constructor() {
     this.worker = new Worker('ai-processing', this.processFile.bind(this), {
       connection,
-      concurrency: 3, // Process 3 files simultaneously
+      concurrency: 3, 
     });
 
     this.worker.on('completed', (job) => {
@@ -38,6 +38,8 @@ class AIProcessor {
     const { fileId, filePath, mimeType, userId }: AIJobData = job.data;
     
     console.log(`Starting AI processing for file: ${fileId}`);
+    console.log(`File path: ${filePath}`);
+    console.log(`MIME type: ${mimeType}`);
 
     try {
       // Update processing status
@@ -84,7 +86,7 @@ class AIProcessor {
       console.log(`AI processing completed for file: ${fileId}`);
       
     } catch (error) {
-      console.error(` AI processing failed for file ${fileId}:`, error);
+      console.error(`AI processing failed for file ${fileId}:`, error);
       
       await prisma.file.update({
         where: { id: fileId },
@@ -131,9 +133,15 @@ class AIProcessor {
       const pdfData = await pdfParse(fileBuffer);
       const text = pdfData.text;
 
-      // Generate summary using OpenAI
+
+      if (text.length < 50) {
+        return { summary: null, keywords: [], text: text };
+      }
+
       const summary = await this.generateSummary(text);
+      
       const keywords = this.extractKeywords(text);
+
 
       return {
         summary,
@@ -141,7 +149,7 @@ class AIProcessor {
         text: text.substring(0, 5000) // Store first 5000 chars
       };
     } catch (error) {
-      console.error('PDF processing error:', error);
+      console.log(error);
       return { summary: null, keywords: [], text: '' };
     }
   }
@@ -165,33 +173,62 @@ class AIProcessor {
 
   async generateSummary(text: string): Promise<string | null> {
     try {
-      if (!text || text.length < 100) return null;
+      if (!text || text.length < 100) {
+        console.log(`Text too short for summary (${text.length} chars)`);
+        return null;
+      }
+
+      if (!process.env.OPENAI_API_KEY) {
+        console.error('OpenAI API key not found');
+        return null;
+      }
+
+      // Truncate text to fit within token limits (roughly 3000 chars = ~750 tokens)
+      const textToSummarize = text.substring(0, 3000);
 
       const response = await openai.chat.completions.create({
         model: 'gpt-3.5-turbo',
         messages: [
           {
             role: 'system',
-            content: 'You are a helpful assistant that creates concise summaries of documents. Provide a 2-3 sentence summary that captures the main points.'
+            content: 'You are a helpful assistant that creates concise summaries of documents. Provide a 2-3 sentence summary that captures the main points and key information.'
           },
           {
             role: 'user',
-            content: `Please summarize this text: ${text.substring(0, 3000)}`
+            content: `Please summarize this document:\n\n${textToSummarize}`
           }
         ],
         max_tokens: 150,
         temperature: 0.3,
       });
 
-      return response.choices[0]?.message?.content || null;
-    } catch (error) {
-      console.error('OpenAI summary error:', error);
+      const summary = response.choices[0]?.message?.content;
+      
+      if (summary) {
+        console.log(`OpenAI summary generated successfully (${summary.length} chars)`);
+      } else {
+        console.warn('OpenAI returned empty summary');
+      }
+
+      return summary || null;
+    } catch (error: any) {
+      
+      // Check for specific OpenAI errors
+      if (error.code === 'insufficient_quota') {
+        console.log(error);
+      } else if (error.code === 'invalid_api_key') {
+        console.log(error);
+      } else if (error.status === 429) {
+        console.log(error);
+      }
+      
       return null;
     }
   }
 
   extractKeywords(text: string): string[] {
     if (!text) return [];
+
 
     // Simple keyword extraction (can be enhanced with NLP libraries)
     const words = text
@@ -208,10 +245,12 @@ class AIProcessor {
     });
 
     // Return top 10 keywords
-    return Object.entries(wordCount)
+    const keywords = Object.entries(wordCount)
       .sort(([,a], [,b]) => b - a)
       .slice(0, 10)
       .map(([word]) => word);
+    
+    return keywords;
   }
 
   private stopWords = [
@@ -231,9 +270,14 @@ class AIProcessor {
 // Start the worker
 const processor = new AIProcessor();
 
+
 // Handle graceful shutdown
 process.on('SIGTERM', async () => {
-  console.log('Shutting down AI processor...');
+  await processor.close();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
   await processor.close();
   process.exit(0);
 });
