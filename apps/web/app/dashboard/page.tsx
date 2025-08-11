@@ -20,6 +20,7 @@ import {
 import { FileUpload } from '@repo/ui/file-upload';
 import { SearchBar } from '@repo/ui/search-bar';
 import { FileGrid } from '@repo/ui/file-grid';
+import { FileTree } from '@repo/ui/file-tree';
 import { Button } from '@repo/ui/button';
 import Image from 'next/image';
 
@@ -46,12 +47,29 @@ interface Folder {
   subfolderCount: number;
 }
 
+interface FileNode {
+  id: string;
+  name: string;
+  type: 'file' | 'folder';
+  size?: number;
+  mimeType?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  children?: FileNode[];
+  isExpanded?: boolean;
+  parentId?: string;
+  tags?: string[];
+  isStarred?: boolean;
+}
+
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [files, setFiles] = useState<File[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const [selectedTreeItems, setSelectedTreeItems] = useState<string[]>([]);
+  const [fileTree, setFileTree] = useState<FileNode[]>([]);
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [showUpload, setShowUpload] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
