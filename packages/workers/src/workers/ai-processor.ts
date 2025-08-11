@@ -6,15 +6,18 @@ import pdfParse from 'pdf-parse';
 import sharp from 'sharp';
 import fs from 'fs/promises';
 import { connection, AIJobData } from '../queue.js';
+import { visionConfig, documentClassificationPatterns } from '../config/vision-config.js';
 
 // Initialize AI clients
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const visionClient = new vision.ImageAnnotatorClient({
-  keyFilename: process.env.GOOGLE_CLOUD_KEY_FILE,
-});
+const visionClient = process.env.GOOGLE_CLOUD_KEY_FILE 
+  ? new vision.ImageAnnotatorClient({
+      keyFilename: process.env.GOOGLE_CLOUD_KEY_FILE,
+    })
+  : null;
 
 class AIProcessor {
   private worker: Worker;
@@ -99,31 +102,89 @@ class AIProcessor {
 
   async processImage(filePath: string) {
     try {
-      // Use Google Cloud Vision for image analysis
-      const [result] = await visionClient.labelDetection(filePath);
-      const labels = result.labelAnnotations || [];
+      console.log(`🖼️ Processing image with Google Cloud Vision: ${filePath}`);
       
-      // Extract text using OCR
+      // Check if Vision client is available
+      if (!visionClient) {
+        console.warn('⚠️ Google Cloud Vision client not configured. Using basic image processing.');
+        return {
+          tags: ['image', 'unprocessed'],
+          text: '',
+          keywords: []
+        };
+      }
+
+      // Perform multiple types of analysis
+      const [labelResult] = await visionClient.labelDetection(filePath);
       const [textResult] = await visionClient.textDetection(filePath);
-      const ocrText = textResult.textAnnotations?.[0]?.description || '';
-
-      // Generate tags from labels
-      const tags = labels
-        .filter(label => (label.score || 0) > 0.7)
+      
+      // Object localization and logo detection (optional features)
+      let objectAnnotations: any[] = [];
+      let logoAnnotations: any[] = [];
+      
+      try {
+        if (visionClient.objectLocalization) {
+          const [objectResult] = await visionClient.objectLocalization(filePath);
+          objectAnnotations = objectResult.localizedObjectAnnotations || [];
+        }
+      } catch (error) {
+        console.warn('Object localization not available:', error);
+      }
+      
+      try {
+        if (visionClient.logoDetection) {
+          const [logoResult] = await visionClient.logoDetection(filePath);
+          logoAnnotations = logoResult.logoAnnotations || [];
+        }
+      } catch (error) {
+        console.warn('Logo detection not available:', error);
+      }
+      
+      // Extract labels (general image content)
+      const labels = labelResult.labelAnnotations || [];
+      const labelTags = labels
+        .filter(label => (label.score || 0) > visionConfig.confidence.labels)
         .map(label => label.description || '')
-        .slice(0, 10);
+        .slice(0, visionConfig.maxResults.labels);
 
+      // Extract objects (specific items in the image)
+      const objectTags = objectAnnotations
+        .filter(obj => (obj.score || 0) > visionConfig.confidence.objects)
+        .map(obj => obj.name || '')
+        .slice(0, visionConfig.maxResults.objects);
+
+      // Extract logos/brands
+      const logoTags = logoAnnotations
+        .filter(logo => (logo.score || 0) > visionConfig.confidence.logos)
+        .map(logo => logo.description || '')
+        .slice(0, visionConfig.maxResults.logos);
+
+      // Combine all tags and remove duplicates
+      const allTags = [...new Set([...labelTags, ...objectTags, ...logoTags])];
+      
+      // Enhance tags with document-specific classifications
+      const enhancedTags = this.enhanceImageTags(allTags, textResult.textAnnotations?.[0]?.description || '');
+
+      // Extract OCR text
+      const ocrText = textResult.textAnnotations?.[0]?.description || '';
+      
       // Extract keywords from OCR text
       const keywords = this.extractKeywords(ocrText);
 
+      console.log(`✅ Image processing completed. Found ${enhancedTags.length} tags, ${keywords.length} keywords`);
+
       return {
-        tags,
+        tags: enhancedTags,
         text: ocrText,
         keywords
       };
     } catch (error) {
       console.error('Image processing error:', error);
-      return { tags: [], text: '', keywords: [] };
+      return { 
+        tags: ['image', 'processing-failed'], 
+        text: '', 
+        keywords: [] 
+      };
     }
   }
 
@@ -224,6 +285,70 @@ class AIProcessor {
       
       return null;
     }
+  }
+
+  enhanceImageTags(baseTags: string[], ocrText: string): string[] {
+    const enhancedTags = [...baseTags];
+    const lowerOcrText = ocrText.toLowerCase();
+    
+    // Document type detection based on OCR content using imported patterns
+    for (const [tag, pattern] of Object.entries(documentClassificationPatterns)) {
+      if (pattern.test(lowerOcrText) && !enhancedTags.includes(tag)) {
+        enhancedTags.push(tag);
+      }
+    }
+
+    // Visual content enhancement based on existing tags
+    const visualEnhancements = {
+      'text': ['document', 'readable'],
+      'person': ['people', 'portrait'],
+      'vehicle': ['transportation'],
+      'building': ['architecture', 'structure'],
+      'food': ['dining', 'meal'],
+      'nature': ['outdoor', 'scenic'],
+      'technology': ['digital', 'tech'],
+      'handwriting': ['personal', 'manual'],
+      'paper': ['document', 'printed'],
+      'book': ['reading', 'literature'],
+      'computer': ['digital', 'technology'],
+      'phone': ['mobile', 'communication']
+    };
+
+    for (const [baseTag, additions] of Object.entries(visualEnhancements)) {
+      if (baseTags.some(tag => tag.toLowerCase().includes(baseTag))) {
+        additions.forEach(addition => {
+          if (!enhancedTags.includes(addition)) {
+            enhancedTags.push(addition);
+          }
+        });
+      }
+    }
+
+    // Quality and utility tags
+    if (ocrText.length > 100) {
+      enhancedTags.push('text-rich');
+    } else if (ocrText.length > 20) {
+      enhancedTags.push('has-text');
+    }
+    
+    if (ocrText.length < 10 && baseTags.length > 0) {
+      enhancedTags.push('visual-content');
+    }
+
+    // Add utility tags based on content
+    if (ocrText.includes('@') || ocrText.includes('email')) {
+      enhancedTags.push('contact-info');
+    }
+    
+    if (/\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/.test(ocrText)) {
+      enhancedTags.push('phone-number');
+    }
+    
+    if (/\$\d+|\d+\.\d{2}/.test(ocrText)) {
+      enhancedTags.push('monetary');
+    }
+    
+    return enhancedTags.slice(0, 15); // Limit to 15 tags max
   }
 
   extractKeywords(text: string): string[] {

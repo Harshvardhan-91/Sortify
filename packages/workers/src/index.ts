@@ -5,9 +5,11 @@ import { QueueMonitor } from './monitor.js';
 // Load environment variables
 dotenv.config();
 
+
 // Export functions for use by backend
 export { addAIProcessingJob, addCleanupJob, aiQueue, cleanupQueue } from './queue.js';
 export { QueueMonitor } from './monitor.js';
+export { visionConfig } from './config/vision-config.js';
 
 // Start queue monitoring (every 30 seconds)
 QueueMonitor.startMonitoring(30000);
@@ -25,8 +27,8 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
-
 // Show initial stats
 setTimeout(async () => {
+  console.log('\nQueue Statistics:');
   await QueueMonitor.printStats();
 }, 5000);
