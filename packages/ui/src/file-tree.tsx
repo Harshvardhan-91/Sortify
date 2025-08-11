@@ -262,9 +262,9 @@ export const FileTree: React.FC<FileTreeProps> = ({
   const nodesWithState = addExpandedState(filteredFiles);
 
   return (
-    <div className={`flex flex-col h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${className}`}>
+    <div className={`flex flex-col h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 shadow-sm ${className}`}>
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             Files
@@ -274,14 +274,16 @@ export const FileTree: React.FC<FileTreeProps> = ({
               size="sm"
               variant="ghost"
               onClick={() => onCreateFolder()}
-              className="p-2"
+              className="p-2 hover:bg-gray-200 dark:hover:bg-gray-600"
+              title="Create Folder"
             >
               <Plus className="h-4 w-4" />
             </Button>
             <Button
               size="sm"
               variant="ghost"
-              className="p-2"
+              className="p-2 hover:bg-gray-200 dark:hover:bg-gray-600"
+              title="Filter"
             >
               <Filter className="h-4 w-4" />
             </Button>
@@ -297,8 +299,8 @@ export const FileTree: React.FC<FileTreeProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg 
-                     bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
-                     focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                     bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500
+                     focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
           />
         </div>
       </div>
@@ -331,7 +333,7 @@ export const FileTree: React.FC<FileTreeProps> = ({
       </div>
 
       {/* Quick Stats */}
-      <div className="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
         <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
           <span>{files.length} items</span>
           <div className="flex items-center space-x-2">
