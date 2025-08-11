@@ -77,12 +77,11 @@ const FileTreeItem: React.FC<{
     <div className="group">
       <div
         className={`
-          flex items-center px-2 py-1.5 text-sm cursor-pointer transition-all duration-200
-          hover:bg-gray-50 dark:hover:bg-gray-800
-          ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-r-2 border-blue-500' : ''}
-          ${level > 0 ? 'border-l border-gray-200 dark:border-gray-700' : ''}
+          flex items-center px-3 py-2 text-sm cursor-pointer transition-all duration-200 rounded-lg mx-1 mb-1
+          hover:bg-gray-50
+          ${isSelected ? 'bg-blue-50 border border-blue-200 text-blue-700' : 'text-gray-700'}
         `}
-        style={{ paddingLeft: `${level * 20 + 8}px` }}
+        style={{ paddingLeft: `${level * 16 + 12}px` }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         onClick={(e) => {
@@ -97,18 +96,18 @@ const FileTreeItem: React.FC<{
               e.stopPropagation();
               onToggle(node.id);
             }}
-            className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+            className="p-0.5 rounded hover:bg-gray-200 transition-colors mr-1"
           >
             {node.isExpanded ? (
-              <ChevronDown className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+              <ChevronDown className="h-3.5 w-3.5 text-gray-500" />
             ) : (
-              <ChevronRight className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+              <ChevronRight className="h-3.5 w-3.5 text-gray-500" />
             )}
           </button>
         )}
 
         {/* File/Folder Icon */}
-        <div className="ml-1 mr-3 flex-shrink-0">
+        <div className="mr-2 flex-shrink-0">
           {node.type === 'folder' ? (
             node.isExpanded ? (
               <FolderOpen className="h-4 w-4 text-blue-500" />
@@ -116,32 +115,25 @@ const FileTreeItem: React.FC<{
               <Folder className="h-4 w-4 text-blue-600" />
             )
           ) : (
-            <span className="text-lg">{getFileIcon(node.mimeType || '')}</span>
+            <div className="w-4 h-4 flex items-center justify-center">
+              <span className="text-sm">{getFileIcon(node.mimeType || '')}</span>
+            </div>
           )}
         </div>
 
         {/* Name */}
-        <span className="flex-1 truncate font-medium text-gray-900 dark:text-gray-100">
+        <span className="flex-1 truncate font-medium">
           {node.name}
         </span>
 
         {/* Metadata */}
-        <div className="flex items-center space-x-2 ml-2">
+        <div className="flex items-center space-x-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
           {node.isStarred && (
             <Star className="h-3 w-3 text-yellow-500 fill-current" />
           )}
           
-          {node.tags && node.tags.length > 0 && (
-            <div className="flex items-center">
-              <Hash className="h-3 w-3 text-gray-400" />
-              <span className="text-xs text-gray-500 ml-1">
-                {node.tags.length}
-              </span>
-            </div>
-          )}
-
           {node.type === 'file' && node.size && (
-            <span className="text-xs text-gray-500 tabular-nums">
+            <span className="text-xs text-gray-400 tabular-nums">
               {formatSize(node.size)}
             </span>
           )}
@@ -154,7 +146,7 @@ const FileTreeItem: React.FC<{
                   e.stopPropagation();
                   onCreateFolder(node.id);
                 }}
-                className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                className="p-1 rounded hover:bg-gray-200"
                 title="Create folder"
               >
                 <Folder className="h-3 w-3 text-gray-500" />
@@ -164,7 +156,7 @@ const FileTreeItem: React.FC<{
                   e.stopPropagation();
                   onUploadFile(node.id);
                 }}
-                className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                className="p-1 rounded hover:bg-gray-200"
                 title="Upload file"
               >
                 <Plus className="h-3 w-3 text-gray-500" />
@@ -262,60 +254,58 @@ export const FileTree: React.FC<FileTreeProps> = ({
   const nodesWithState = addExpandedState(filteredFiles);
 
   return (
-    <div className={`flex flex-col h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 shadow-sm ${className}`}>
+    <div className={`flex flex-col h-full bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden ${className}`}>
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+      <div className="p-4 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            Files
+          <h2 className="text-sm font-semibold text-gray-900">
+            Files & Folders
           </h2>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1">
             <Button
               size="sm"
               variant="ghost"
               onClick={() => onCreateFolder()}
-              className="p-2 hover:bg-gray-200 dark:hover:bg-gray-600"
+              className="p-1.5 h-7 w-7 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
               title="Create Folder"
             >
-              <Plus className="h-4 w-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="p-2 hover:bg-gray-200 dark:hover:bg-gray-600"
-              title="Filter"
-            >
-              <Filter className="h-4 w-4" />
+              <Plus className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
           <input
             type="text"
             placeholder="Search files and folders..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg 
-                     bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500
-                     focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+            className="w-full pl-10 pr-3 py-2 text-sm border border-gray-200 rounded-lg 
+                     bg-white text-gray-900 placeholder-gray-500
+                     focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all
+                     hover:border-gray-300"
           />
         </div>
       </div>
 
       {/* Tree */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {nodesWithState.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-gray-500 dark:text-gray-400">
-            <File className="h-8 w-8 mb-2" />
-            <p className="text-sm">
+          <div className="flex flex-col items-center justify-center p-8 text-center">
+            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+              <File className="h-6 w-6 text-gray-400" />
+            </div>
+            <p className="text-sm text-gray-600 mb-1">
               {searchQuery ? 'No files found' : 'No files uploaded yet'}
+            </p>
+            <p className="text-xs text-gray-500">
+              {searchQuery ? 'Try a different search term' : 'Upload files to get started'}
             </p>
           </div>
         ) : (
-          <div className="py-2">
+          <div className="p-2">
             {nodesWithState.map((node) => (
               <FileTreeItem
                 key={node.id}
@@ -333,10 +323,10 @@ export const FileTree: React.FC<FileTreeProps> = ({
       </div>
 
       {/* Quick Stats */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-        <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
-          <span>{files.length} items</span>
-          <div className="flex items-center space-x-2">
+      <div className="p-3 border-t border-gray-200 bg-gray-50">
+        <div className="flex items-center justify-between text-xs text-gray-500">
+          <span>{files.length} item{files.length !== 1 ? 's' : ''}</span>
+          <div className="flex items-center space-x-1">
             <Clock className="h-3 w-3" />
             <span>Last updated just now</span>
           </div>

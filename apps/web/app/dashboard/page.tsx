@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { FileUpload } from '@repo/ui/file-upload';
 import { SearchBar } from '@repo/ui/search-bar';
+import { AISearch } from '@repo/ui/ai-search';
 import { FileGrid } from '@repo/ui/file-grid';
 import { FileTree } from '@repo/ui/file-tree';
 import { Button } from '@repo/ui/button';
@@ -65,6 +66,7 @@ export default function DashboardPage() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [selectedTreeItems, setSelectedTreeItems] = useState<string[]>([]);
+  const [filteredFiles, setFilteredFiles] = useState<File[]>([]);
   const [fileTree, setFileTree] = useState<FileNode[]>([]);
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [showUpload, setShowUpload] = useState(false);
@@ -158,6 +160,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const treeData = buildFileTree(files, folders);
     setFileTree(treeData);
+    setFilteredFiles(files); // Initialize filtered files
   }, [files, folders]);
 
   // File tree handlers
@@ -194,16 +197,82 @@ export default function DashboardPage() {
     // Here you would call your API to rename the item
   };
 
-  const handleFileUpload = (uploadedFiles: globalThis.File[]) => {
+  const handleFileUpload = async (uploadedFiles: globalThis.File[]) => {
     console.log('Files uploaded:', uploadedFiles);
-    // Here you would upload to your backend
+    
+    try {
+      const formData = new FormData();
+      uploadedFiles.forEach((file) => {
+        formData.append('files', file);
+      });
+
+      const response = await fetch('/api/files', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Upload successful:', result);
+        
+        // Add uploaded files to the state
+        if (result.files) {
+          setFiles(prev => [...prev, ...result.files]);
+        }
+      } else {
+        console.error('Upload failed:', response.statusText);
+        // For demo purposes, add files to state anyway
+        const newFiles = uploadedFiles.map((file, index) => ({
+          id: `temp-${Date.now()}-${index}`,
+          name: file.name,
+          type: 'file' as const,
+          size: file.size,
+          mimeType: file.type,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          url: URL.createObjectURL(file)
+        }));
+        setFiles(prev => [...prev, ...newFiles]);
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      // For demo purposes, add files to state anyway
+      const newFiles = uploadedFiles.map((file, index) => ({
+        id: `temp-${Date.now()}-${index}`,
+        name: file.name,
+        type: 'file' as const,
+        size: file.size,
+        mimeType: file.type,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        url: URL.createObjectURL(file)
+      }));
+      setFiles(prev => [...prev, ...newFiles]);
+    }
+    
     setShowUpload(false);
   };
 
-  const handleSearch = (query: string) => {
+  const handleSearch = (query: string, filters?: { fileTypes?: string[]; dateRange?: string; hasAI?: boolean; tags?: string[] }) => {
     setSearchQuery(query);
-    console.log('Searching for:', query);
-    // Here you would call your search API
+    console.log('AI-powered search:', query, filters);
+    
+    // Here you would implement AI-powered search logic:
+    // 1. Send query to AI search API
+    // 2. Include semantic search, content analysis, tag matching
+    // 3. Filter by file types, date ranges, etc.
+    // 4. Return ranked results based on relevance
+    
+    // For now, simple text matching
+    if (query.trim()) {
+      const filtered = files.filter(file =>
+        file.name.toLowerCase().includes(query.toLowerCase()) ||
+        (file.mimeType && file.mimeType.toLowerCase().includes(query.toLowerCase()))
+      );
+      setFilteredFiles(filtered);
+    } else {
+      setFilteredFiles(files);
+    }
   };
 
   const handleFileClick = (file: File) => {
@@ -366,16 +435,16 @@ export default function DashboardPage() {
                       {currentFolder ? folders.find(f => f.id === currentFolder)?.name : 'All Files'}
                     </h1>
                     <p className="text-sm text-gray-600 mt-1">
-                      {files.length} file{files.length !== 1 ? 's' : ''} 
+                      {filteredFiles.length} file{filteredFiles.length !== 1 ? 's' : ''} 
                       {selectedFiles.length > 0 && ` • ${selectedFiles.length} selected`}
                     </p>
                   </div>
 
                   <div className="flex items-center space-x-3">
-                    <SearchBar
+                    <AISearch
                       onSearch={handleSearch}
-                      className="w-64"
-                      placeholder="Search files..."
+                      className="w-80"
+                      recentSearches={['documents', 'images', 'receipts']}
                     />
                     <div className="flex items-center space-x-2">
                       <button className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
@@ -393,9 +462,9 @@ export default function DashboardPage() {
 
               {/* Content */}
               <div className="p-6">
-                {files.length > 0 ? (
+                {filteredFiles.length > 0 ? (
                   <FileGrid
-                    files={files}
+                    files={filteredFiles}
                     onFileClick={handleFileClick}
                     onDownload={handleFileDownload}
                     onShare={handleFileShare}
