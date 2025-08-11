@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useSession, signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { 
   Upload, 
   Grid, 
@@ -12,12 +14,14 @@ import {
   Filter,
   SortAsc,
   Tags,
-  Brain
+  Brain,
+  LogOut
 } from 'lucide-react';
 import { FileUpload } from '@repo/ui/file-upload';
 import { SearchBar } from '@repo/ui/search-bar';
 import { FileGrid } from '@repo/ui/file-grid';
 import { Button } from '@repo/ui/button';
+import Image from 'next/image';
 
 interface File {
   id: string;
@@ -43,6 +47,8 @@ interface Folder {
 }
 
 export default function DashboardPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [files, setFiles] = useState<File[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
@@ -52,8 +58,20 @@ export default function DashboardPage() {
   const [currentFolder, setCurrentFolder] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (status === "loading") return; // Still loading
+    
+    if (!session) {
+      router.push('/auth/signin');
+      return;
+    }
+  }, [session, status, router]);
+
   // Mock data for demo
   useEffect(() => {
+    if (!session) return;
+    
     // Simulate loading data
     setTimeout(() => {
       setFiles([
@@ -99,7 +117,7 @@ export default function DashboardPage() {
 
       setLoading(false);
     }, 1000);
-  }, []);
+  }, [session]);
 
   const handleFileUpload = (uploadedFiles: globalThis.File[]) => {
     console.log('Files uploaded:', uploadedFiles);
@@ -134,7 +152,7 @@ export default function DashboardPage() {
     setFiles(prev => prev.filter(f => f.id !== file.id));
   };
 
-  if (loading) {
+  if (loading || !session) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -152,9 +170,18 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Brain className="h-8 w-8 text-blue-600" />
-                <span className="text-2xl font-bold text-gray-900">Sortify</span>
+              <div className="flex items-center space-x-3">
+                <Image
+                  src="/logo.png"
+                  alt="Sortify Logo"
+                  width={40}
+                  height={40}
+                  className="h-10 w-10"
+                />
+                <div>
+                  <span className="text-2xl font-bold text-gray-900">Sortify</span>
+                  <p className="text-xs text-gray-500 -mt-1">AI-Powered Personal Cloud Storage</p>
+                </div>
               </div>
             </div>
 
@@ -175,6 +202,29 @@ export default function DashboardPage() {
                 <Upload className="h-4 w-4 mr-2" />
                 Upload
               </Button>
+
+              {/* User Menu */}
+              <div className="flex items-center space-x-3">
+                <Image 
+                  src={session.user?.image || '/default-avatar.png'} 
+                  alt={session.user?.name || 'User avatar'}
+                  width={32}
+                  height={32}
+                  className="h-8 w-8 rounded-full"
+                />
+                <div className="hidden md:block">
+                  <p className="text-sm font-medium text-gray-900">{session.user?.name}</p>
+                  <p className="text-xs text-gray-500">{session.user?.email}</p>
+                </div>
+                <Button
+                  onClick={() => signOut()}
+                  variant="outline"
+                  size="sm"
+                  className="text-gray-600 hover:text-gray-900"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </div>
 
               <div className="flex items-center space-x-2 border border-gray-200 rounded-lg p-1">
                 <button

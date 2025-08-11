@@ -3,8 +3,22 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
 import { prisma } from '@repo/db';
-import { addAIProcessingJob, QueueMonitor } from '@repo/workers';
 import crypto from 'crypto';
+import { authenticateToken } from '../middleware/auth.js';
+
+// Mock AI processing for now
+const addAIProcessingJob = async (data: any) => {
+  console.log('AI processing job queued:', data);
+};
+
+const QueueMonitor = {
+  getStats: async () => ({
+    waiting: 0,
+    active: 0,
+    completed: 0,
+    failed: 0
+  })
+};
 
 const router = Router();
 
@@ -39,24 +53,6 @@ const upload = multer({
     cb(null, isAllowed);
   }
 });
-
-// Middleware to verify JWT token
-const authenticateToken = async (req: any, res: any, next: any) => {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  
-  if (!token) {
-    return res.status(401).json({ error: 'No token provided' });
-  }
-
-  try {
-    const jwt = await import('jsonwebtoken');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
-    req.userId = decoded.userId;
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-};
 
 // Upload single file
 router.post('/upload', authenticateToken, upload.single('file'), async (req: any, res) => {

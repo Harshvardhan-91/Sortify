@@ -75,9 +75,9 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Sortify Backend API running on port ${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/health`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Sortify Backend API running on port ${PORT}`);
+  console.log(`Health check: http://localhost:${PORT}/health`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 export default app;
