@@ -1,6 +1,7 @@
 {
   "name": "@repo/workers",
   "version": "0.0.0",
+  "type": "module",
   "private": true,
   "main": "./index.ts",
   "exports": {
@@ -10,6 +11,9 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "lint": "eslint . --max-warnings 50",
+    "lint:fix": "eslint . --fix",
+    "check-types": "tsc --noEmit",
     "worker": "tsx src/workers/ai-processor.ts",
     "test-vision": "tsx test-vision.ts"
   },

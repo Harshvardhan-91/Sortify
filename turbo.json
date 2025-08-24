@@ -1,6 +1,21 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
+  "globalEnv": [
+    "NODE_ENV",
+    "PORT",
+    "FRONTEND_URL",
+    "NEXTAUTH_SECRET",
+    "JWT_SECRET",
+    "UPLOAD_DIR",
+    "MAX_FILE_SIZE",
+    "APP_URL",
+    "REDIS_URL",
+    "OPENAI_API_KEY",
+    "GOOGLE_CLOUD_KEY_FILE",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
