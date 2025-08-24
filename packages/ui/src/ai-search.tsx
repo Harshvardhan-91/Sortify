@@ -15,7 +15,6 @@ import {
   Clock,
   Star
 } from 'lucide-react';
-import { Button } from './button';
 
 interface AISearchProps {
   onSearch: (query: string, filters?: SearchFilters) => void;
@@ -41,7 +40,6 @@ interface SearchSuggestion {
 export const AISearch: React.FC<AISearchProps> = ({
   onSearch,
   recentSearches = [],
-  suggestions = [],
   className = ""
 }) => {
   const [query, setQuery] = useState('');
@@ -109,7 +107,7 @@ export const AISearch: React.FC<AISearchProps> = ({
         </div>
         <input
           type="text"
-          placeholder="Search with AI... Try 'find my receipts' or 'photos from vacation'"
+          placeholder="Search in Sortify"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setIsOpen(true)}

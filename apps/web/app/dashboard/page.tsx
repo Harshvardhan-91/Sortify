@@ -71,7 +71,6 @@ export default function DashboardPage() {
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [showUpload, setShowUpload] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentFolder, setCurrentFolder] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Redirect if not authenticated
@@ -408,9 +407,31 @@ export default function DashboardPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex gap-6">
-          {/* File Tree Sidebar */}
+          {/* Enhanced File Tree Sidebar */}
           <div className="w-80 flex-shrink-0">
-            <div className="sticky top-8">
+            <div className="sticky top-8 space-y-4">
+              {/* Quick Actions */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <h3 className="font-medium text-gray-900 mb-3">Quick Actions</h3>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setShowUpload(true)}
+                    className="w-full flex items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 rounded-md"
+                  >
+                    <Upload className="h-4 w-4 mr-3 text-blue-600" />
+                    Upload Files
+                  </button>
+                  <button
+                    onClick={() => handleCreateFolder()}
+                    className="w-full flex items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 rounded-md"
+                  >
+                    <Folder className="h-4 w-4 mr-3 text-green-600" />
+                    New Folder
+                  </button>
+                </div>
+              </div>
+              
+              {/* File Tree */}
               <FileTree
                 files={fileTree}
                 selectedItems={selectedTreeItems}
@@ -419,7 +440,7 @@ export default function DashboardPage() {
                 onUploadFile={handleUploadToFolder}
                 onDeleteItem={handleDeleteItem}
                 onRenameItem={handleRenameItem}
-                className="h-[calc(100vh-12rem)] rounded-lg shadow-sm"
+                className="h-[calc(100vh-20rem)] rounded-lg shadow-sm"
               />
             </div>
           </div>
@@ -427,14 +448,14 @@ export default function DashboardPage() {
           {/* Main Content */}
           <div className="flex-1 min-w-0">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              {/* Header */}
-              <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
+              {/* Enhanced Header - Google Drive Style */}
+              <div className="border-b border-gray-200 bg-white px-6 py-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h1 className="text-xl font-semibold text-gray-900">
-                      {currentFolder ? folders.find(f => f.id === currentFolder)?.name : 'All Files'}
+                    <h1 className="text-2xl font-medium text-gray-900">
+                      My Sortify
                     </h1>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-sm text-gray-500 mt-1">
                       {filteredFiles.length} file{filteredFiles.length !== 1 ? 's' : ''} 
                       {selectedFiles.length > 0 && ` • ${selectedFiles.length} selected`}
                     </p>
