@@ -1,23 +1,150 @@
-name: GitHub Actions Demo
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
-on: [push]
+name: Sortify CI/CD Pipeline
+run-name: ${{ github.actor }} is building Sortify 🚀
+
+# Trigger the workflow on push to main branch and pull requests
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# Define environment variables
+env:
+  NODE_VERSION: '18'
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
 jobs:
-  Explore-GitHub-Actions:
+  #=Install dependencies and build the project
+  build:
+    name: Build and Test
     runs-on: ubuntu-latest
+    
     steps:
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+      # Checkout the repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for proper turbo caching
 
-      - name: Check out repository code
+      # Setup Node.js with caching
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      # Install dependencies
+      - name: Install dependencies
+        run: npm ci
+
+      # Validate turbo configuration
+      - name: Validate Turbo setup
+        run: npx turbo --version
+
+      # Run linting across all packages
+      - name: Lint code
+        run: npm run lint
+
+      # Type checking across all packages
+      - name: Type check
+        run: npm run check-types
+
+      # Generate Prisma client
+      - name: Generate Prisma client
+        run: npm run db:generate
+
+      # Build all packages and apps
+      - name: Build project
+        run: npm run build
+
+      # Check for format issues
+      - name: Check code formatting
+        run: npx prettier --check "**/*.{ts,tsx,md,json,yml,yaml}"
+
+  # Security and dependency checks
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
 
-      - name: List files in the repository
+      - name: Install dependencies
+        run: npm ci
+
+      # Check for known vulnerabilities
+      - name: Audit dependencies
+        run: npm audit --audit-level=moderate
+
+      # Check for outdated packages
+      - name: Check outdated packages
+        run: npm outdated || true
+
+  # Docker build test (for deployment readiness)
+  docker:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Test server Docker build
+      - name: Build server Docker image
         run: |
-          ls ${{ github.workspace }}
+          if [ -f "apps/server/Dockerfile" ]; then
+            cd apps/server
+            docker build -t sortify-server:test .
+            echo "Server Docker image built successfully"
+          else
+            echo "Server Dockerfile not found, skipping"
+          fi
 
-      - run: echo "🍏 This job's status is ${{ job.status }}."
+      # Test workers Docker build
+      - name: Build workers Docker image
+        run: |
+          if [ -f "packages/workers/Dockerfile" ]; then
+            cd packages/workers
+            docker build -t sortify-workers:test .
+            echo "Workers Docker image built successfully"
+          else
+            echo "Workers Dockerfile not found, skipping"
+          fi
+
+  # Job 4: Deployment readiness check
+  deploy-check:
+    name: Deployment Readiness
+    runs-on: ubuntu-latest
+    needs: [build, security, docker]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deployment Ready
+        run: |
+          echo "All checks passed!"
+          echo "Build Status: Success"
+          echo "Security: Passed"
+          echo "Docker: Ready"
+          echo "Ready for deployment to production!"
+
+      # Notify on success
+      - name: Success notification
+        run: |
+          echo "Sortify CI/CD Pipeline completed successfully!"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Author: ${{ github.actor }}"
+          echo "Commit: ${{ github.sha }}"
