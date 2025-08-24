@@ -72,7 +72,7 @@ export function SearchBar({
         setSelectedSuggestion(prev => prev > 0 ? prev - 1 : -1);
         break;
       case 'Enter':
-        if (selectedSuggestion >= 0) {
+        if (selectedSuggestion >= 0 && suggestions && suggestions[selectedSuggestion]) {
           e.preventDefault();
           handleSuggestionClick(suggestions[selectedSuggestion].value);
         }

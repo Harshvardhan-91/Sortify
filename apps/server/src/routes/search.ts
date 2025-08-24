@@ -186,7 +186,9 @@ router.get('/tags', authenticateToken, async (req: any, res) => {
     const files = await prisma.file.findMany({
       where: {
         ownerId: req.userId,
-        aiTags: { not: { isEmpty: true } }
+        aiTags: {
+          isEmpty: false
+        }
       },
       select: { aiTags: true }
     });

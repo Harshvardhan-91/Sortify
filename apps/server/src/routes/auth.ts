@@ -25,7 +25,7 @@ router.post('/google', async (req, res) => {
         data: {
           email,
           name,
-          avatar,
+          image: avatar,
         }
       });
     } else {
@@ -34,7 +34,7 @@ router.post('/google', async (req, res) => {
         where: { id: user.id },
         data: {
           name: name || user.name,
-          avatar: avatar || user.avatar,
+          image: avatar || user.image,
         }
       });
     }
@@ -51,7 +51,7 @@ router.post('/google', async (req, res) => {
         id: user.id,
         email: user.email,
         name: user.name,
-        avatar: user.avatar,
+        avatar: user.image,
       },
       token
     });
@@ -78,7 +78,7 @@ router.get('/me', async (req, res) => {
         id: true,
         email: true,
         name: true,
-        avatar: true,
+        image: true,
         createdAt: true,
       }
     });

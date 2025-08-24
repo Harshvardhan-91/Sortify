@@ -16,6 +16,7 @@
     "worker": "turbo run worker"
   },
   "devDependencies": {
+    "@types/pdf-parse": "^1.1.5",
     "prettier": "^3.6.0",
     "prettier-plugin-tailwindcss": "^0.6.11",
     "turbo": "^2.5.5"
