@@ -1,22 +1,22 @@
-import { Router } from 'express';
-import { prisma } from '@repo/db';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { Router } from "express";
+import { prisma } from "@repo/db";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 const router = Router();
 
 // Google OAuth callback endpoint
-router.post('/google', async (req, res) => {
+router.post("/google", async (req, res) => {
   try {
     const { email, name, avatar, googleId } = req.body;
 
     if (!email || !googleId) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return res.status(400).json({ error: "Missing required fields" });
     }
 
     // Check if user exists
     let user = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
     });
 
     if (!user) {
@@ -26,7 +26,7 @@ router.post('/google', async (req, res) => {
           email,
           name,
           image: avatar,
-        }
+        },
       });
     } else {
       // Update existing user's info
@@ -35,15 +35,15 @@ router.post('/google', async (req, res) => {
         data: {
           name: name || user.name,
           image: avatar || user.image,
-        }
+        },
       });
     }
 
     // Generate JWT token
     const token = jwt.sign(
       { userId: user.id, email: user.email },
-      process.env.JWT_SECRET || 'fallback-secret',
-      { expiresIn: '7d' }
+      process.env.JWT_SECRET || "fallback-secret",
+      { expiresIn: "7d" },
     );
 
     res.json({
@@ -53,25 +53,28 @@ router.post('/google', async (req, res) => {
         name: user.name,
         avatar: user.image,
       },
-      token
+      token,
     });
   } catch (error) {
-    console.error('Auth error:', error);
-    res.status(500).json({ error: 'Authentication failed' });
+    console.error("Auth error:", error);
+    res.status(500).json({ error: "Authentication failed" });
   }
 });
 
 // Get current user
-router.get('/me', async (req, res) => {
+router.get("/me", async (req, res) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    
+    const token = req.headers.authorization?.replace("Bearer ", "");
+
     if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
+      return res.status(401).json({ error: "No token provided" });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
-    
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || "fallback-secret",
+    ) as any;
+
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
       select: {
@@ -80,24 +83,24 @@ router.get('/me', async (req, res) => {
         name: true,
         image: true,
         createdAt: true,
-      }
+      },
     });
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: "User not found" });
     }
 
     res.json({ user });
   } catch (error) {
-    console.error('Auth verification error:', error);
-    res.status(401).json({ error: 'Invalid token' });
+    console.error("Auth verification error:", error);
+    res.status(401).json({ error: "Invalid token" });
   }
 });
 
 // Logout endpoint
-router.post('/logout', (req, res) => {
+router.post("/logout", (req, res) => {
   // With JWT, logout is handled client-side by removing the token
-  res.json({ message: 'Logged out successfully' });
+  res.json({ message: "Logged out successfully" });
 });
 
 export default router;

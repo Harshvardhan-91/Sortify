@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { 
-  X, 
-  Download, 
-  Share2, 
-  Star, 
-  Trash2, 
+import React, { useState } from "react";
+import {
+  X,
+  Download,
+  Share2,
+  Star,
+  Trash2,
   Edit3,
   MoreVertical,
   ChevronLeft,
@@ -15,14 +15,14 @@ import {
   ZoomOut,
   RotateCw,
   Maximize2,
-  FileText
-} from 'lucide-react';
-import { Button } from './button';
+  FileText,
+} from "lucide-react";
+import { Button } from "./button";
 
 interface File {
   id: string;
   name: string;
-  type: 'file' | 'folder';
+  type: "file" | "folder";
   size: number;
   mimeType: string;
   createdAt: string;
@@ -49,14 +49,14 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   onDownload,
   onShare,
   onDelete,
-  onRename
+  onRename,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [zoom, setZoom] = useState(100);
   const [rotation, setRotation] = useState(0);
 
-  const fileIndex = files.findIndex(f => f.id === (file?.id || ''));
-  
+  const fileIndex = files.findIndex((f) => f.id === (file?.id || ""));
+
   React.useEffect(() => {
     if (fileIndex !== -1) {
       setCurrentIndex(fileIndex);
@@ -67,47 +67,48 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
 
   const currentFile = files[currentIndex] || file;
 
-  const navigateToFile = (direction: 'prev' | 'next') => {
-    const newIndex = direction === 'next' 
-      ? Math.min(currentIndex + 1, files.length - 1)
-      : Math.max(currentIndex - 1, 0);
+  const navigateToFile = (direction: "prev" | "next") => {
+    const newIndex =
+      direction === "next"
+        ? Math.min(currentIndex + 1, files.length - 1)
+        : Math.max(currentIndex - 1, 0);
     setCurrentIndex(newIndex);
   };
 
   const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 B';
+    if (bytes === 0) return "0 B";
     const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const sizes = ["B", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
   };
 
   const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const renderPreview = () => {
-    const mimeType = currentFile.mimeType || '';
+    const mimeType = currentFile.mimeType || "";
 
-    if (mimeType.startsWith('image/')) {
+    if (mimeType.startsWith("image/")) {
       return (
         <div className="flex-1 flex items-center justify-center bg-gray-900 relative overflow-hidden">
           <img
-            src={currentFile.url || '#'}
+            src={currentFile.url || "#"}
             alt={currentFile.name}
             className="max-w-full max-h-full object-contain transition-transform duration-200"
-            style={{ 
+            style={{
               transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
-              transformOrigin: 'center'
+              transformOrigin: "center",
             }}
           />
-          
+
           {/* Image Controls */}
           <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center space-x-2 bg-black bg-opacity-50 rounded-lg px-4 py-2">
             <button
@@ -141,11 +142,11 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
       );
     }
 
-    if (mimeType.startsWith('video/')) {
+    if (mimeType.startsWith("video/")) {
       return (
         <div className="flex-1 flex items-center justify-center bg-gray-900">
           <video
-            src={currentFile.url || '#'}
+            src={currentFile.url || "#"}
             controls
             className="max-w-full max-h-full"
           >
@@ -155,21 +156,23 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
       );
     }
 
-    if (mimeType.startsWith('audio/')) {
+    if (mimeType.startsWith("audio/")) {
       return (
         <div className="flex-1 flex items-center justify-center bg-gray-50">
           <div className="text-center">
             <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mb-4 mx-auto">
               <span className="text-4xl">🎵</span>
             </div>
-            <audio src={currentFile.url || '#'} controls className="mb-4" />
-            <h3 className="text-lg font-medium text-gray-900">{currentFile.name}</h3>
+            <audio src={currentFile.url || "#"} controls className="mb-4" />
+            <h3 className="text-lg font-medium text-gray-900">
+              {currentFile.name}
+            </h3>
           </div>
         </div>
       );
     }
 
-    if (mimeType.includes('pdf')) {
+    if (mimeType.includes("pdf")) {
       return (
         <div className="flex-1 bg-gray-100 flex items-center justify-center">
           {currentFile.url ? (
@@ -183,9 +186,13 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
               <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mb-4 mx-auto">
                 <FileText className="h-12 w-12 text-red-600" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">{currentFile.name}</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {currentFile.name}
+              </h3>
               <p className="text-sm text-gray-500 mb-4">PDF Preview</p>
-              <p className="text-xs text-gray-400">File content will load when uploaded</p>
+              <p className="text-xs text-gray-400">
+                File content will load when uploaded
+              </p>
             </div>
           )}
         </div>
@@ -193,7 +200,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
     }
 
     // Text files
-    if (mimeType.startsWith('text/')) {
+    if (mimeType.startsWith("text/")) {
       return (
         <div className="flex-1 bg-white p-6 overflow-auto">
           <div className="max-w-4xl mx-auto">
@@ -213,8 +220,12 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
           <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center mb-4 mx-auto">
             <span className="text-4xl">📄</span>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">{currentFile.name}</h3>
-          <p className="text-gray-600 mb-4">Preview not available for this file type</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            {currentFile.name}
+          </h3>
+          <p className="text-gray-600 mb-4">
+            Preview not available for this file type
+          </p>
           <Button
             onClick={() => onDownload(currentFile)}
             className="bg-blue-600 hover:bg-blue-700"
@@ -230,8 +241,11 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black bg-opacity-75" onClick={onClose} />
-      
+      <div
+        className="absolute inset-0 bg-black bg-opacity-75"
+        onClick={onClose}
+      />
+
       {/* Modal */}
       <div className="relative flex flex-col w-full max-w-7xl mx-auto bg-white">
         {/* Header */}
@@ -241,16 +255,17 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
               {currentFile.name}
             </h2>
             <span className="text-sm text-gray-500">
-              {formatFileSize(currentFile.size)} • {formatDate(currentFile.createdAt)}
+              {formatFileSize(currentFile.size)} •{" "}
+              {formatDate(currentFile.createdAt)}
             </span>
           </div>
-          
+
           <div className="flex items-center space-x-2">
             {/* Navigation */}
             {files.length > 1 && (
               <>
                 <button
-                  onClick={() => navigateToFile('prev')}
+                  onClick={() => navigateToFile("prev")}
                   disabled={currentIndex === 0}
                   className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -260,7 +275,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
                   {currentIndex + 1} of {files.length}
                 </span>
                 <button
-                  onClick={() => navigateToFile('next')}
+                  onClick={() => navigateToFile("next")}
                   disabled={currentIndex === files.length - 1}
                   className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -269,18 +284,18 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
                 <div className="w-px h-6 bg-gray-300 mx-2" />
               </>
             )}
-            
+
             {/* Actions */}
             <button className="p-2 text-gray-400 hover:text-gray-600">
               <Star className="h-5 w-5" />
             </button>
-            <button 
+            <button
               onClick={() => onShare(currentFile)}
               className="p-2 text-gray-400 hover:text-gray-600"
             >
               <Share2 className="h-5 w-5" />
             </button>
-            <button 
+            <button
               onClick={() => onDownload(currentFile)}
               className="p-2 text-gray-400 hover:text-gray-600"
             >
@@ -289,7 +304,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
             <button className="p-2 text-gray-400 hover:text-gray-600">
               <MoreVertical className="h-5 w-5" />
             </button>
-            <button 
+            <button
               onClick={onClose}
               className="p-2 text-gray-400 hover:text-gray-600"
             >
@@ -299,28 +314,34 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
         </div>
 
         {/* Preview Content */}
-        <div className="flex-1 overflow-hidden">
-          {renderPreview()}
-        </div>
+        <div className="flex-1 overflow-hidden">{renderPreview()}</div>
 
         {/* Footer with file details */}
         <div className="p-4 border-t border-gray-200 bg-gray-50">
           <div className="grid grid-cols-4 gap-4 text-sm">
             <div>
               <span className="font-medium text-gray-500">Type:</span>
-              <p className="text-gray-900">{currentFile.mimeType || 'Unknown'}</p>
+              <p className="text-gray-900">
+                {currentFile.mimeType || "Unknown"}
+              </p>
             </div>
             <div>
               <span className="font-medium text-gray-500">Size:</span>
-              <p className="text-gray-900">{formatFileSize(currentFile.size)}</p>
+              <p className="text-gray-900">
+                {formatFileSize(currentFile.size)}
+              </p>
             </div>
             <div>
               <span className="font-medium text-gray-500">Created:</span>
-              <p className="text-gray-900">{formatDate(currentFile.createdAt)}</p>
+              <p className="text-gray-900">
+                {formatDate(currentFile.createdAt)}
+              </p>
             </div>
             <div>
               <span className="font-medium text-gray-500">Modified:</span>
-              <p className="text-gray-900">{formatDate(currentFile.updatedAt)}</p>
+              <p className="text-gray-900">
+                {formatDate(currentFile.updatedAt)}
+              </p>
             </div>
           </div>
         </div>

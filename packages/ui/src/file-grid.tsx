@@ -1,11 +1,11 @@
-import React from 'react';
-import { 
-  File, 
-  FileText, 
-  Image, 
-  Film, 
-  Music, 
-  Archive, 
+import React from "react";
+import {
+  File,
+  FileText,
+  Image,
+  Film,
+  Music,
+  Archive,
   Code,
   Download,
   Share,
@@ -14,9 +14,9 @@ import {
   Eye,
   Calendar,
   HardDrive,
-  Tag
-} from 'lucide-react';
-import { cn } from './utils';
+  Tag,
+} from "lucide-react";
+import { cn } from "./utils";
 
 interface FileItem {
   id: string;
@@ -27,7 +27,7 @@ interface FileItem {
   updatedAt: string;
   aiTags?: string[];
   aiSummary?: string;
-  processingStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  processingStatus?: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
   folder?: {
     id: string;
     name: string;
@@ -43,7 +43,7 @@ interface FileGridProps {
   onRename?: (file: FileItem) => void;
   selectedFiles?: string[];
   onSelectionChange?: (selectedIds: string[]) => void;
-  view?: 'grid' | 'list';
+  view?: "grid" | "list";
   className?: string;
 }
 
@@ -56,50 +56,60 @@ export function FileGrid({
   onRename,
   selectedFiles = [],
   onSelectionChange,
-  view = 'grid',
-  className
+  view = "grid",
+  className,
 }: FileGridProps) {
   const getFileIcon = (mimeType: string) => {
-    if (mimeType.startsWith('image/')) return Image;
-    if (mimeType.startsWith('video/')) return Film;
-    if (mimeType.startsWith('audio/')) return Music;
-    if (mimeType.includes('pdf')) return FileText;
-    if (mimeType.includes('zip') || mimeType.includes('rar')) return Archive;
-    if (mimeType.includes('code') || mimeType.includes('javascript') || mimeType.includes('typescript')) return Code;
+    if (mimeType.startsWith("image/")) return Image;
+    if (mimeType.startsWith("video/")) return Film;
+    if (mimeType.startsWith("audio/")) return Music;
+    if (mimeType.includes("pdf")) return FileText;
+    if (mimeType.includes("zip") || mimeType.includes("rar")) return Archive;
+    if (
+      mimeType.includes("code") ||
+      mimeType.includes("javascript") ||
+      mimeType.includes("typescript")
+    )
+      return Code;
     return File;
   };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return "0 Bytes";
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     });
   };
 
   const handleSelectionChange = (fileId: string, isSelected: boolean) => {
     if (!onSelectionChange) return;
-    
+
     const newSelection = isSelected
       ? [...selectedFiles, fileId]
-      : selectedFiles.filter(id => id !== fileId);
-    
+      : selectedFiles.filter((id) => id !== fileId);
+
     onSelectionChange(newSelection);
   };
 
   const isSelected = (fileId: string) => selectedFiles.includes(fileId);
 
-  if (view === 'list') {
+  if (view === "list") {
     return (
-      <div className={cn('ui:overflow-hidden ui:rounded-lg ui:border ui:border-gray-200', className)}>
+      <div
+        className={cn(
+          "ui:overflow-hidden ui:rounded-lg ui:border ui:border-gray-200",
+          className,
+        )}
+      >
         <table className="ui:min-w-full ui:divide-y ui:divide-gray-200">
           <thead className="ui:bg-gray-50">
             <tr>
@@ -107,10 +117,14 @@ export function FileGrid({
                 <input
                   type="checkbox"
                   className="ui:rounded ui:border-gray-300"
-                  checked={files.length > 0 && selectedFiles.length === files.length}
+                  checked={
+                    files.length > 0 && selectedFiles.length === files.length
+                  }
                   onChange={(e) => {
                     if (onSelectionChange) {
-                      onSelectionChange(e.target.checked ? files.map(f => f.id) : []);
+                      onSelectionChange(
+                        e.target.checked ? files.map((f) => f.id) : [],
+                      );
                     }
                   }}
                 />
@@ -136,31 +150,32 @@ export function FileGrid({
             {files.map((file) => {
               const IconComponent = getFileIcon(file.mimeType);
               return (
-                <tr 
+                <tr
                   key={file.id}
-                  className={cn(
-                    'ui:transition-colors hover:ui:bg-gray-50',
-                    {
-                      'ui:bg-blue-50': isSelected(file.id)
-                    }
-                  )}
+                  className={cn("ui:transition-colors hover:ui:bg-gray-50", {
+                    "ui:bg-blue-50": isSelected(file.id),
+                  })}
                 >
                   <td className="ui:px-6 ui:py-4">
                     <input
                       type="checkbox"
                       className="ui:rounded ui:border-gray-300"
                       checked={isSelected(file.id)}
-                      onChange={(e) => handleSelectionChange(file.id, e.target.checked)}
+                      onChange={(e) =>
+                        handleSelectionChange(file.id, e.target.checked)
+                      }
                     />
                   </td>
                   <td className="ui:px-6 ui:py-4">
-                    <div 
+                    <div
                       className="ui:flex ui:items-center ui:space-x-3 ui:cursor-pointer"
                       onClick={() => onFileClick?.(file)}
                     >
                       <IconComponent className="ui:h-8 ui:w-8 ui:text-gray-400" />
                       <div>
-                        <p className="ui:text-sm ui:font-medium ui:text-gray-900">{file.name}</p>
+                        <p className="ui:text-sm ui:font-medium ui:text-gray-900">
+                          {file.name}
+                        </p>
                         {file.aiSummary && (
                           <p className="ui:text-xs ui:text-gray-500 ui:truncate ui:max-w-xs">
                             {file.aiSummary}
@@ -230,17 +245,22 @@ export function FileGrid({
   }
 
   return (
-    <div className={cn('ui:grid ui:grid-cols-1 ui:gap-4 sm:ui:grid-cols-2 lg:ui:grid-cols-3 xl:ui:grid-cols-4', className)}>
+    <div
+      className={cn(
+        "ui:grid ui:grid-cols-1 ui:gap-4 sm:ui:grid-cols-2 lg:ui:grid-cols-3 xl:ui:grid-cols-4",
+        className,
+      )}
+    >
       {files.map((file) => {
         const IconComponent = getFileIcon(file.mimeType);
         return (
           <div
             key={file.id}
             className={cn(
-              'ui:group ui:relative ui:rounded-lg ui:border ui:border-gray-200 ui:bg-white ui:p-4 ui:transition-all hover:ui:shadow-md',
+              "ui:group ui:relative ui:rounded-lg ui:border ui:border-gray-200 ui:bg-white ui:p-4 ui:transition-all hover:ui:shadow-md",
               {
-                'ui:border-blue-500 ui:bg-blue-50': isSelected(file.id)
-              }
+                "ui:border-blue-500 ui:bg-blue-50": isSelected(file.id),
+              },
             )}
           >
             <div className="ui:absolute ui:top-3 ui:right-3">
@@ -248,11 +268,13 @@ export function FileGrid({
                 type="checkbox"
                 className="ui:rounded ui:border-gray-300"
                 checked={isSelected(file.id)}
-                onChange={(e) => handleSelectionChange(file.id, e.target.checked)}
+                onChange={(e) =>
+                  handleSelectionChange(file.id, e.target.checked)
+                }
               />
             </div>
 
-            <div 
+            <div
               className="ui:cursor-pointer"
               onClick={() => onFileClick?.(file)}
             >
@@ -296,20 +318,26 @@ export function FileGrid({
                 </div>
               )}
 
-              {file.processingStatus && file.processingStatus !== 'COMPLETED' && (
-                <div className="ui:mt-2">
-                  <span className={cn(
-                    'ui:inline-flex ui:items-center ui:rounded ui:px-2 ui:py-0.5 ui:text-xs ui:font-medium',
-                    {
-                      'ui:bg-yellow-100 ui:text-yellow-800': file.processingStatus === 'PENDING',
-                      'ui:bg-blue-100 ui:text-blue-800': file.processingStatus === 'PROCESSING',
-                      'ui:bg-red-100 ui:text-red-800': file.processingStatus === 'FAILED',
-                    }
-                  )}>
-                    AI {file.processingStatus.toLowerCase()}
-                  </span>
-                </div>
-              )}
+              {file.processingStatus &&
+                file.processingStatus !== "COMPLETED" && (
+                  <div className="ui:mt-2">
+                    <span
+                      className={cn(
+                        "ui:inline-flex ui:items-center ui:rounded ui:px-2 ui:py-0.5 ui:text-xs ui:font-medium",
+                        {
+                          "ui:bg-yellow-100 ui:text-yellow-800":
+                            file.processingStatus === "PENDING",
+                          "ui:bg-blue-100 ui:text-blue-800":
+                            file.processingStatus === "PROCESSING",
+                          "ui:bg-red-100 ui:text-red-800":
+                            file.processingStatus === "FAILED",
+                        },
+                      )}
+                    >
+                      AI {file.processingStatus.toLowerCase()}
+                    </span>
+                  </div>
+                )}
             </div>
 
             <div className="ui:mt-3 ui:flex ui:items-center ui:justify-between ui:opacity-0 ui:transition-opacity group-hover:ui:opacity-100">

@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { 
+import React, { useState } from "react";
+import {
   Plus,
   Home,
   HardDrive,
@@ -9,9 +9,9 @@ import {
   Database,
   ChevronRight,
   FolderPlus,
-  Upload
-} from 'lucide-react';
-import { Button } from './button';
+  Upload,
+} from "lucide-react";
+import { Button } from "./button";
 
 interface DriveSidebarProps {
   className?: string;
@@ -30,7 +30,7 @@ export const DriveSidebar: React.FC<DriveSidebarProps> = ({
   onNavigate,
   currentSection = "home",
   storageUsed = 0,
-  storageTotal = 15
+  storageTotal = 15,
 }) => {
   const [isNewMenuOpen, setIsNewMenuOpen] = useState(false);
 
@@ -42,33 +42,35 @@ export const DriveSidebar: React.FC<DriveSidebarProps> = ({
 
   const menuItems = [
     {
-      id: 'home',
-      label: 'Home',
+      id: "home",
+      label: "Home",
       icon: Home,
-      active: currentSection === 'home'
+      active: currentSection === "home",
     },
     {
-      id: 'my-sortify',
-      label: 'My Sortify',
+      id: "my-sortify",
+      label: "My Sortify",
       icon: HardDrive,
-      active: currentSection === 'my-sortify'
+      active: currentSection === "my-sortify",
     },
     {
-      id: 'recent',
-      label: 'Recent',
+      id: "recent",
+      label: "Recent",
       icon: Clock,
-      active: currentSection === 'recent'
+      active: currentSection === "recent",
     },
     {
-      id: 'storage',
-      label: 'Storage',
+      id: "storage",
+      label: "Storage",
       icon: Database,
-      active: currentSection === 'storage'
-    }
+      active: currentSection === "storage",
+    },
   ];
 
   return (
-    <div className={`w-64 bg-white border-r border-gray-200 flex flex-col h-full ${className}`}>
+    <div
+      className={`w-64 bg-white border-r border-gray-200 flex flex-col h-full ${className}`}
+    >
       {/* New Button */}
       <div className="p-3">
         <div className="relative">
@@ -79,7 +81,7 @@ export const DriveSidebar: React.FC<DriveSidebarProps> = ({
             <Plus className="h-6 w-6 mr-3 text-blue-600" />
             New
           </Button>
-          
+
           {/* New Menu Dropdown */}
           {isNewMenuOpen && (
             <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
@@ -127,13 +129,15 @@ export const DriveSidebar: React.FC<DriveSidebarProps> = ({
                   onClick={() => onNavigate?.(item.id)}
                   className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                     item.active
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-700 hover:bg-gray-50'
+                      ? "bg-blue-50 text-blue-700"
+                      : "text-gray-700 hover:bg-gray-50"
                   }`}
                 >
-                  <Icon className={`h-5 w-5 mr-3 ${item.active ? 'text-blue-600' : 'text-gray-500'}`} />
+                  <Icon
+                    className={`h-5 w-5 mr-3 ${item.active ? "text-blue-600" : "text-gray-500"}`}
+                  />
                   {item.label}
-                  {item.id === 'my-sortify' && (
+                  {item.id === "my-sortify" && (
                     <ChevronRight className="h-4 w-4 ml-auto text-gray-400" />
                   )}
                 </button>
@@ -151,7 +155,7 @@ export const DriveSidebar: React.FC<DriveSidebarProps> = ({
             Storage
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-            <div 
+            <div
               className="bg-blue-600 h-2 rounded-full transition-all duration-300"
               style={{ width: `${Math.min(storagePercentage, 100)}%` }}
             />

@@ -1,6 +1,6 @@
-import React from 'react';
-import { Search, X } from 'lucide-react';
-import { cn } from './utils';
+import React from "react";
+import { Search, X } from "lucide-react";
+import { cn } from "./utils";
 
 interface SearchBarProps {
   value?: string;
@@ -8,19 +8,19 @@ interface SearchBarProps {
   onClear?: () => void;
   placeholder?: string;
   suggestions?: Array<{
-    type: 'filename' | 'tag' | 'keyword';
+    type: "filename" | "tag" | "keyword";
     value: string;
   }>;
   className?: string;
 }
 
 export function SearchBar({
-  value = '',
+  value = "",
   onSearch,
   onClear,
-  placeholder = 'Search files, tags, or content...',
+  placeholder = "Search files, tags, or content...",
   suggestions = [],
-  className
+  className,
 }: SearchBarProps) {
   const [query, setQuery] = React.useState(value);
   const [showSuggestions, setShowSuggestions] = React.useState(false);
@@ -42,7 +42,7 @@ export function SearchBar({
   };
 
   const handleClear = () => {
-    setQuery('');
+    setQuery("");
     setShowSuggestions(false);
     if (onClear) {
       onClear();
@@ -61,23 +61,27 @@ export function SearchBar({
     if (!showSuggestions || suggestions.length === 0) return;
 
     switch (e.key) {
-      case 'ArrowDown':
+      case "ArrowDown":
         e.preventDefault();
-        setSelectedSuggestion(prev => 
-          prev < suggestions.length - 1 ? prev + 1 : prev
+        setSelectedSuggestion((prev) =>
+          prev < suggestions.length - 1 ? prev + 1 : prev,
         );
         break;
-      case 'ArrowUp':
+      case "ArrowUp":
         e.preventDefault();
-        setSelectedSuggestion(prev => prev > 0 ? prev - 1 : -1);
+        setSelectedSuggestion((prev) => (prev > 0 ? prev - 1 : -1));
         break;
-      case 'Enter':
-        if (selectedSuggestion >= 0 && suggestions && suggestions[selectedSuggestion]) {
+      case "Enter":
+        if (
+          selectedSuggestion >= 0 &&
+          suggestions &&
+          suggestions[selectedSuggestion]
+        ) {
           e.preventDefault();
           handleSuggestionClick(suggestions[selectedSuggestion].value);
         }
         break;
-      case 'Escape':
+      case "Escape":
         setShowSuggestions(false);
         setSelectedSuggestion(-1);
         break;
@@ -85,7 +89,7 @@ export function SearchBar({
   };
 
   return (
-    <div className={cn('ui:relative ui:w-full ui:max-w-2xl', className)}>
+    <div className={cn("ui:relative ui:w-full ui:max-w-2xl", className)}>
       <form onSubmit={handleSubmit} className="ui:relative">
         <div className="ui:relative ui:flex ui:items-center">
           <Search className="ui:absolute ui:left-3 ui:h-4 ui:w-4 ui:text-gray-400" />
@@ -120,21 +124,28 @@ export function SearchBar({
                 type="button"
                 onClick={() => handleSuggestionClick(suggestion.value)}
                 className={cn(
-                  'ui:flex ui:w-full ui:items-center ui:space-x-2 ui:px-3 ui:py-2 ui:text-left ui:text-sm ui:transition-colors',
+                  "ui:flex ui:w-full ui:items-center ui:space-x-2 ui:px-3 ui:py-2 ui:text-left ui:text-sm ui:transition-colors",
                   {
-                    'ui:bg-blue-50 ui:text-blue-900': selectedSuggestion === index,
-                    'ui:text-gray-900 hover:ui:bg-gray-50': selectedSuggestion !== index,
-                  }
+                    "ui:bg-blue-50 ui:text-blue-900":
+                      selectedSuggestion === index,
+                    "ui:text-gray-900 hover:ui:bg-gray-50":
+                      selectedSuggestion !== index,
+                  },
                 )}
               >
-                <span className={cn(
-                  'ui:inline-flex ui:items-center ui:rounded ui:px-1.5 ui:py-0.5 ui:text-xs ui:font-medium',
-                  {
-                    'ui:bg-blue-100 ui:text-blue-800': suggestion.type === 'filename',
-                    'ui:bg-green-100 ui:text-green-800': suggestion.type === 'tag',
-                    'ui:bg-purple-100 ui:text-purple-800': suggestion.type === 'keyword',
-                  }
-                )}>
+                <span
+                  className={cn(
+                    "ui:inline-flex ui:items-center ui:rounded ui:px-1.5 ui:py-0.5 ui:text-xs ui:font-medium",
+                    {
+                      "ui:bg-blue-100 ui:text-blue-800":
+                        suggestion.type === "filename",
+                      "ui:bg-green-100 ui:text-green-800":
+                        suggestion.type === "tag",
+                      "ui:bg-purple-100 ui:text-purple-800":
+                        suggestion.type === "keyword",
+                    },
+                  )}
+                >
                   {suggestion.type}
                 </span>
                 <span className="ui:truncate">{suggestion.value}</span>

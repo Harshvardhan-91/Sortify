@@ -1,25 +1,25 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { 
-  ChevronRight, 
-  ChevronDown, 
-  Folder, 
-  FolderOpen, 
-  File, 
+import React, { useState, useEffect } from "react";
+import {
+  ChevronRight,
+  ChevronDown,
+  Folder,
+  FolderOpen,
+  File,
   Plus,
   Search,
   Filter,
   Star,
   Clock,
-  Hash
-} from 'lucide-react';
-import { Button } from './button';
+  Hash,
+} from "lucide-react";
+import { Button } from "./button";
 
 interface FileNode {
   id: string;
   name: string;
-  type: 'file' | 'folder';
+  type: "file" | "folder";
   size?: number;
   mimeType?: string;
   createdAt: Date;
@@ -50,27 +50,37 @@ const FileTreeItem: React.FC<{
   onToggle: (id: string) => void;
   onCreateFolder: (parentId: string) => void;
   onUploadFile: (parentId: string) => void;
-}> = ({ node, level, isSelected, onSelect, onToggle, onCreateFolder, onUploadFile }) => {
+}> = ({
+  node,
+  level,
+  isSelected,
+  onSelect,
+  onToggle,
+  onCreateFolder,
+  onUploadFile,
+}) => {
   const [isHovered, setIsHovered] = useState(false);
 
   const formatSize = (bytes: number) => {
-    if (bytes === 0) return '0 B';
+    if (bytes === 0) return "0 B";
     const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const sizes = ["B", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
   };
 
   const getFileIcon = (mimeType: string) => {
-    if (mimeType.startsWith('image/')) return '🖼️';
-    if (mimeType.startsWith('video/')) return '🎥';
-    if (mimeType.startsWith('audio/')) return '🎵';
-    if (mimeType.includes('pdf')) return '📄';
-    if (mimeType.includes('document') || mimeType.includes('word')) return '📝';
-    if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return '📊';
-    if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) return '📽️';
-    if (mimeType.includes('zip') || mimeType.includes('rar')) return '🗜️';
-    return '📄';
+    if (mimeType.startsWith("image/")) return "🖼️";
+    if (mimeType.startsWith("video/")) return "🎥";
+    if (mimeType.startsWith("audio/")) return "🎵";
+    if (mimeType.includes("pdf")) return "📄";
+    if (mimeType.includes("document") || mimeType.includes("word")) return "📝";
+    if (mimeType.includes("spreadsheet") || mimeType.includes("excel"))
+      return "📊";
+    if (mimeType.includes("presentation") || mimeType.includes("powerpoint"))
+      return "📽️";
+    if (mimeType.includes("zip") || mimeType.includes("rar")) return "🗜️";
+    return "📄";
   };
 
   return (
@@ -79,7 +89,7 @@ const FileTreeItem: React.FC<{
         className={`
           flex items-center px-3 py-2 text-sm cursor-pointer transition-all duration-200 rounded-lg mx-1 mb-1
           hover:bg-gray-50
-          ${isSelected ? 'bg-blue-50 border border-blue-200 text-blue-700' : 'text-gray-700'}
+          ${isSelected ? "bg-blue-50 border border-blue-200 text-blue-700" : "text-gray-700"}
         `}
         style={{ paddingLeft: `${level * 16 + 12}px` }}
         onMouseEnter={() => setIsHovered(true)}
@@ -90,7 +100,7 @@ const FileTreeItem: React.FC<{
         }}
       >
         {/* Expand/Collapse Icon */}
-        {node.type === 'folder' && (
+        {node.type === "folder" && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -108,7 +118,7 @@ const FileTreeItem: React.FC<{
 
         {/* File/Folder Icon */}
         <div className="mr-2 flex-shrink-0">
-          {node.type === 'folder' ? (
+          {node.type === "folder" ? (
             node.isExpanded ? (
               <FolderOpen className="h-4 w-4 text-blue-500" />
             ) : (
@@ -116,30 +126,30 @@ const FileTreeItem: React.FC<{
             )
           ) : (
             <div className="w-4 h-4 flex items-center justify-center">
-              <span className="text-sm">{getFileIcon(node.mimeType || '')}</span>
+              <span className="text-sm">
+                {getFileIcon(node.mimeType || "")}
+              </span>
             </div>
           )}
         </div>
 
         {/* Name */}
-        <span className="flex-1 truncate font-medium">
-          {node.name}
-        </span>
+        <span className="flex-1 truncate font-medium">{node.name}</span>
 
         {/* Metadata */}
         <div className="flex items-center space-x-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
           {node.isStarred && (
             <Star className="h-3 w-3 text-yellow-500 fill-current" />
           )}
-          
-          {node.type === 'file' && node.size && (
+
+          {node.type === "file" && node.size && (
             <span className="text-xs text-gray-400 tabular-nums">
               {formatSize(node.size)}
             </span>
           )}
 
           {/* Quick Actions */}
-          {isHovered && node.type === 'folder' && (
+          {isHovered && node.type === "folder" && (
             <div className="flex items-center space-x-1">
               <button
                 onClick={(e) => {
@@ -167,7 +177,7 @@ const FileTreeItem: React.FC<{
       </div>
 
       {/* Children */}
-      {node.type === 'folder' && node.isExpanded && node.children && (
+      {node.type === "folder" && node.isExpanded && node.children && (
         <div className="ml-4">
           {node.children.map((child) => (
             <FileTreeItem
@@ -193,9 +203,9 @@ export const FileTree: React.FC<FileTreeProps> = ({
   onSelectItem,
   onCreateFolder,
   onUploadFile,
-  className = ''
+  className = "",
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [filteredFiles, setFilteredFiles] = useState<FileNode[]>(files);
 
@@ -208,22 +218,26 @@ export const FileTree: React.FC<FileTreeProps> = ({
 
     const filterNodes = (nodes: FileNode[]): FileNode[] => {
       return nodes.reduce((acc: FileNode[], node) => {
-        const matchesSearch = node.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            (node.tags && node.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())));
-        
-        if (node.type === 'folder' && node.children) {
+        const matchesSearch =
+          node.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (node.tags &&
+            node.tags.some((tag) =>
+              tag.toLowerCase().includes(searchQuery.toLowerCase()),
+            ));
+
+        if (node.type === "folder" && node.children) {
           const filteredChildren = filterNodes(node.children);
           if (matchesSearch || filteredChildren.length > 0) {
             acc.push({
               ...node,
               children: filteredChildren,
-              isExpanded: filteredChildren.length > 0 ? true : node.isExpanded
+              isExpanded: filteredChildren.length > 0 ? true : node.isExpanded,
             });
           }
         } else if (matchesSearch) {
           acc.push(node);
         }
-        
+
         return acc;
       }, []);
     };
@@ -232,7 +246,7 @@ export const FileTree: React.FC<FileTreeProps> = ({
   }, [searchQuery, files]);
 
   const handleToggle = (id: string) => {
-    setExpandedItems(prev => {
+    setExpandedItems((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
         newSet.delete(id);
@@ -244,17 +258,19 @@ export const FileTree: React.FC<FileTreeProps> = ({
   };
 
   const addExpandedState = (nodes: FileNode[]): FileNode[] => {
-    return nodes.map(node => ({
+    return nodes.map((node) => ({
       ...node,
       isExpanded: expandedItems.has(node.id),
-      children: node.children ? addExpandedState(node.children) : undefined
+      children: node.children ? addExpandedState(node.children) : undefined,
     }));
   };
 
   const nodesWithState = addExpandedState(filteredFiles);
 
   return (
-    <div className={`flex flex-col h-full bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden ${className}`}>
+    <div
+      className={`flex flex-col h-full bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden ${className}`}
+    >
       {/* Header */}
       <div className="p-4 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center justify-between mb-3">
@@ -298,10 +314,12 @@ export const FileTree: React.FC<FileTreeProps> = ({
               <File className="h-6 w-6 text-gray-400" />
             </div>
             <p className="text-sm text-gray-600 mb-1">
-              {searchQuery ? 'No files found' : 'No files uploaded yet'}
+              {searchQuery ? "No files found" : "No files uploaded yet"}
             </p>
             <p className="text-xs text-gray-500">
-              {searchQuery ? 'Try a different search term' : 'Upload files to get started'}
+              {searchQuery
+                ? "Try a different search term"
+                : "Upload files to get started"}
             </p>
           </div>
         ) : (
@@ -325,7 +343,9 @@ export const FileTree: React.FC<FileTreeProps> = ({
       {/* Quick Stats */}
       <div className="p-3 border-t border-gray-200 bg-gray-50">
         <div className="flex items-center justify-between text-xs text-gray-500">
-          <span>{files.length} item{files.length !== 1 ? 's' : ''}</span>
+          <span>
+            {files.length} item{files.length !== 1 ? "s" : ""}
+          </span>
           <div className="flex items-center space-x-1">
             <Clock className="h-3 w-3" />
             <span>Last updated just now</span>

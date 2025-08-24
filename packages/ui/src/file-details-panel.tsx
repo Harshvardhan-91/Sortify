@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { 
+import React, { useState } from "react";
+import {
   X,
   Download,
   Share2,
@@ -23,10 +23,10 @@ import {
   Clock,
   User,
   Folder,
-  Hash
-} from 'lucide-react';
-import { Button } from './button';
-import Image from 'next/image';
+  Hash,
+} from "lucide-react";
+import { Button } from "./button";
+import Image from "next/image";
 
 interface FileDetailsPanelProps {
   file: {
@@ -66,21 +66,25 @@ export const FileDetailsPanel: React.FC<FileDetailsPanelProps> = ({
   onDelete,
   onRename,
   onUpdateTags,
-  className = ''
+  className = "",
 }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [editedName, setEditedName] = useState(file?.name || '');
-  const [newTag, setNewTag] = useState('');
+  const [editedName, setEditedName] = useState(file?.name || "");
+  const [newTag, setNewTag] = useState("");
   const [tags, setTags] = useState(file?.aiTags || []);
 
   if (!file) {
     return (
-      <div className={`w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 ${className}`}>
+      <div
+        className={`w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 ${className}`}
+      >
         <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
           <div className="text-center">
             <FileX className="h-12 w-12 mx-auto mb-4 text-gray-300" />
             <p className="text-sm">No file selected</p>
-            <p className="text-xs text-gray-400 mt-1">Select a file to view details</p>
+            <p className="text-xs text-gray-400 mt-1">
+              Select a file to view details
+            </p>
           </div>
         </div>
       </div>
@@ -88,29 +92,34 @@ export const FileDetailsPanel: React.FC<FileDetailsPanelProps> = ({
   }
 
   const formatSize = (bytes: number) => {
-    if (bytes === 0) return '0 B';
+    if (bytes === 0) return "0 B";
     const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const sizes = ["B", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
   };
 
   const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Intl.DateTimeFormat("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     }).format(new Date(date));
   };
 
   const getFileTypeIcon = () => {
-    if (file.mimeType.startsWith('image/')) return <ImageIcon className="h-6 w-6 text-green-500" />;
-    if (file.mimeType.startsWith('video/')) return <Video className="h-6 w-6 text-purple-500" />;
-    if (file.mimeType.startsWith('audio/')) return <Music className="h-6 w-6 text-blue-500" />;
-    if (file.mimeType.includes('pdf')) return <FileText className="h-6 w-6 text-red-500" />;
-    if (file.mimeType.includes('zip') || file.mimeType.includes('rar')) return <Archive className="h-6 w-6 text-yellow-500" />;
+    if (file.mimeType.startsWith("image/"))
+      return <ImageIcon className="h-6 w-6 text-green-500" />;
+    if (file.mimeType.startsWith("video/"))
+      return <Video className="h-6 w-6 text-purple-500" />;
+    if (file.mimeType.startsWith("audio/"))
+      return <Music className="h-6 w-6 text-blue-500" />;
+    if (file.mimeType.includes("pdf"))
+      return <FileText className="h-6 w-6 text-red-500" />;
+    if (file.mimeType.includes("zip") || file.mimeType.includes("rar"))
+      return <Archive className="h-6 w-6 text-yellow-500" />;
     return <FileText className="h-6 w-6 text-gray-500" />;
   };
 
@@ -126,29 +135,28 @@ export const FileDetailsPanel: React.FC<FileDetailsPanelProps> = ({
       const updatedTags = [...tags, newTag.trim()];
       setTags(updatedTags);
       onUpdateTags(file.id, updatedTags);
-      setNewTag('');
+      setNewTag("");
     }
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
-    const updatedTags = tags.filter(tag => tag !== tagToRemove);
+    const updatedTags = tags.filter((tag) => tag !== tagToRemove);
     setTags(updatedTags);
     onUpdateTags(file.id, updatedTags);
   };
 
-  const isImageFile = file.mimeType.startsWith('image/');
+  const isImageFile = file.mimeType.startsWith("image/");
 
   return (
-    <div className={`w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 flex flex-col ${className}`}>
+    <div
+      className={`w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 flex flex-col ${className}`}
+    >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">File Details</h3>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClose}
-          className="p-2"
-        >
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          File Details
+        </h3>
+        <Button variant="ghost" size="sm" onClick={onClose} className="p-2">
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -167,7 +175,7 @@ export const FileDetailsPanel: React.FC<FileDetailsPanelProps> = ({
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
+                  target.style.display = "none";
                 }}
               />
             </div>
@@ -191,8 +199,8 @@ export const FileDetailsPanel: React.FC<FileDetailsPanelProps> = ({
                     autoFocus
                     onBlur={handleRename}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleRename();
-                      if (e.key === 'Escape') {
+                      if (e.key === "Enter") handleRename();
+                      if (e.key === "Escape") {
                         setEditedName(file.name);
                         setIsEditing(false);
                       }
@@ -241,9 +249,11 @@ export const FileDetailsPanel: React.FC<FileDetailsPanelProps> = ({
               variant="ghost"
               size="sm"
               onClick={() => onStar(file.id)}
-              className={`p-2 ${file.isStarred ? 'text-yellow-500' : 'text-gray-500'}`}
+              className={`p-2 ${file.isStarred ? "text-yellow-500" : "text-gray-500"}`}
             >
-              <Star className={`h-4 w-4 ${file.isStarred ? 'fill-current' : ''}`} />
+              <Star
+                className={`h-4 w-4 ${file.isStarred ? "fill-current" : ""}`}
+              />
             </Button>
           </div>
 
@@ -253,32 +263,40 @@ export const FileDetailsPanel: React.FC<FileDetailsPanelProps> = ({
               <Info className="h-4 w-4 mr-2" />
               Properties
             </h5>
-            
+
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-gray-600 dark:text-gray-400">Size</span>
-                <span className="font-mono text-gray-900 dark:text-gray-100">{formatSize(file.size)}</span>
+                <span className="font-mono text-gray-900 dark:text-gray-100">
+                  {formatSize(file.size)}
+                </span>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span className="text-gray-600 dark:text-gray-400">Type</span>
-                <span className="text-gray-900 dark:text-gray-100">{file.mimeType}</span>
+                <span className="text-gray-900 dark:text-gray-100">
+                  {file.mimeType}
+                </span>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span className="text-gray-600 dark:text-gray-400 flex items-center">
                   <Calendar className="h-3 w-3 mr-1" />
                   Created
                 </span>
-                <span className="text-gray-900 dark:text-gray-100">{formatDate(file.createdAt)}</span>
+                <span className="text-gray-900 dark:text-gray-100">
+                  {formatDate(file.createdAt)}
+                </span>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span className="text-gray-600 dark:text-gray-400 flex items-center">
                   <Clock className="h-3 w-3 mr-1" />
                   Modified
                 </span>
-                <span className="text-gray-900 dark:text-gray-100">{formatDate(file.updatedAt)}</span>
+                <span className="text-gray-900 dark:text-gray-100">
+                  {formatDate(file.updatedAt)}
+                </span>
               </div>
 
               {file.folder && (
@@ -287,7 +305,9 @@ export const FileDetailsPanel: React.FC<FileDetailsPanelProps> = ({
                     <Folder className="h-3 w-3 mr-1" />
                     Location
                   </span>
-                  <span className="text-gray-900 dark:text-gray-100 truncate ml-2">{file.folder.name}</span>
+                  <span className="text-gray-900 dark:text-gray-100 truncate ml-2">
+                    {file.folder.name}
+                  </span>
                 </div>
               )}
             </div>
@@ -296,7 +316,9 @@ export const FileDetailsPanel: React.FC<FileDetailsPanelProps> = ({
           {/* AI Summary */}
           {file.aiSummary && (
             <div className="space-y-3">
-              <h5 className="text-sm font-medium text-gray-900 dark:text-gray-100">AI Summary</h5>
+              <h5 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                AI Summary
+              </h5>
               <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                 {file.aiSummary}
               </p>
@@ -309,7 +331,7 @@ export const FileDetailsPanel: React.FC<FileDetailsPanelProps> = ({
               <Hash className="h-4 w-4 mr-2" />
               Tags
             </h5>
-            
+
             <div className="flex flex-wrap gap-2">
               {tags.map((tag) => (
                 <span
@@ -337,7 +359,7 @@ export const FileDetailsPanel: React.FC<FileDetailsPanelProps> = ({
                 className="flex-1 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded
                          bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleAddTag();
+                  if (e.key === "Enter") handleAddTag();
                 }}
               />
               <Button
@@ -354,7 +376,9 @@ export const FileDetailsPanel: React.FC<FileDetailsPanelProps> = ({
           {/* OCR Text */}
           {file.ocrText && (
             <div className="space-y-3">
-              <h5 className="text-sm font-medium text-gray-900 dark:text-gray-100">Extracted Text</h5>
+              <h5 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                Extracted Text
+              </h5>
               <div className="max-h-32 overflow-y-auto p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
                   {file.ocrText}
@@ -368,19 +392,11 @@ export const FileDetailsPanel: React.FC<FileDetailsPanelProps> = ({
       {/* Footer Actions */}
       <div className="p-4 border-t border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex-1"
-          >
+          <Button variant="ghost" size="sm" className="flex-1">
             <Eye className="h-4 w-4 mr-2" />
             Preview
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex-1"
-          >
+          <Button variant="ghost" size="sm" className="flex-1">
             <Copy className="h-4 w-4 mr-2" />
             Copy Link
           </Button>

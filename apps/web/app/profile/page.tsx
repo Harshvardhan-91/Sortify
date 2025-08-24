@@ -1,24 +1,24 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { useSession, signOut } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { 
-  Mail, 
-  Calendar, 
-  Shield, 
-  Bell, 
-  Archive, 
-  Trash2, 
+import React, { useState } from "react";
+import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import {
+  Mail,
+  Calendar,
+  Shield,
+  Bell,
+  Archive,
+  Trash2,
   Download,
   Settings,
   ArrowLeft,
   Camera,
   Save,
-  X
-} from 'lucide-react';
-import { Button } from '@repo/ui/button';
-import Image from 'next/image';
+  X,
+} from "lucide-react";
+import { Button } from "@repo/ui/button";
+import Image from "next/image";
 
 interface UserStats {
   totalFiles: number;
@@ -33,45 +33,49 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [userStats] = useState<UserStats>({
     totalFiles: 0,
-    totalStorage: '0 MB',
+    totalStorage: "0 MB",
     filesThisMonth: 0,
-    aiProcessedFiles: 0
+    aiProcessedFiles: 0,
   });
 
   const [profileData, setProfileData] = useState({
-    displayName: session?.user?.name || '',
-    email: session?.user?.email || '',
-    bio: '',
-    location: '',
-    website: ''
+    displayName: session?.user?.name || "",
+    email: session?.user?.email || "",
+    bio: "",
+    location: "",
+    website: "",
   });
 
   const handleSaveProfile = () => {
     // Here you would call your API to update the profile
-    console.log('Saving profile:', profileData);
+    console.log("Saving profile:", profileData);
     setIsEditing(false);
   };
 
   const handleDeleteAccount = () => {
-    if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+    if (
+      confirm(
+        "Are you sure you want to delete your account? This action cannot be undone.",
+      )
+    ) {
       // Here you would call your API to delete the account
-      console.log('Deleting account');
+      console.log("Deleting account");
     }
   };
 
   const handleExportData = () => {
     // Here you would call your API to export user data
-    console.log('Exporting user data');
+    console.log("Exporting user data");
   };
 
   if (!session) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Please sign in</h1>
-          <Button onClick={() => router.push('/auth/signin')}>
-            Sign In
-          </Button>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            Please sign in
+          </h1>
+          <Button onClick={() => router.push("/auth/signin")}>Sign In</Button>
         </div>
       </div>
     );
@@ -86,7 +90,7 @@ export default function ProfilePage() {
             <div className="flex items-center space-x-4">
               <Button
                 variant="ghost"
-                onClick={() => router.push('/dashboard')}
+                onClick={() => router.push("/dashboard")}
                 className="p-2"
               >
                 <ArrowLeft className="h-5 w-5" />
@@ -94,7 +98,7 @@ export default function ProfilePage() {
               <h1 className="text-xl font-semibold text-gray-900">Profile</h1>
             </div>
             <Button
-              onClick={() => router.push('/settings')}
+              onClick={() => router.push("/settings")}
               variant="outline"
               className="flex items-center space-x-2"
             >
@@ -115,7 +119,7 @@ export default function ProfilePage() {
                 <div className="absolute -bottom-16 left-6">
                   <div className="relative">
                     <Image
-                      src={session.user?.image || '/default-avatar.png'}
+                      src={session.user?.image || "/default-avatar.png"}
                       alt="Profile picture"
                       width={128}
                       height={128}
@@ -139,18 +143,28 @@ export default function ProfilePage() {
                       <input
                         type="text"
                         value={profileData.displayName}
-                        onChange={(e) => setProfileData(prev => ({ ...prev, displayName: e.target.value }))}
+                        onChange={(e) =>
+                          setProfileData((prev) => ({
+                            ...prev,
+                            displayName: e.target.value,
+                          }))
+                        }
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 placeholder-gray-500 shadow-sm"
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Bio
                       </label>
                       <textarea
                         value={profileData.bio}
-                        onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
+                        onChange={(e) =>
+                          setProfileData((prev) => ({
+                            ...prev,
+                            bio: e.target.value,
+                          }))
+                        }
                         rows={3}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 placeholder-gray-500 shadow-sm"
                         placeholder="Tell us about yourself..."
@@ -165,12 +179,17 @@ export default function ProfilePage() {
                         <input
                           type="text"
                           value={profileData.location}
-                          onChange={(e) => setProfileData(prev => ({ ...prev, location: e.target.value }))}
+                          onChange={(e) =>
+                            setProfileData((prev) => ({
+                              ...prev,
+                              location: e.target.value,
+                            }))
+                          }
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 shadow-sm"
                           placeholder="City, Country"
                         />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Website
@@ -178,7 +197,12 @@ export default function ProfilePage() {
                         <input
                           type="url"
                           value={profileData.website}
-                          onChange={(e) => setProfileData(prev => ({ ...prev, website: e.target.value }))}
+                          onChange={(e) =>
+                            setProfileData((prev) => ({
+                              ...prev,
+                              website: e.target.value,
+                            }))
+                          }
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 shadow-sm"
                           placeholder="https://example.com"
                         />
@@ -186,11 +210,17 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="flex items-center space-x-3 pt-4">
-                      <Button onClick={handleSaveProfile} className="flex items-center space-x-2">
+                      <Button
+                        onClick={handleSaveProfile}
+                        className="flex items-center space-x-2"
+                      >
                         <Save className="h-4 w-4" />
                         <span>Save Changes</span>
                       </Button>
-                      <Button variant="outline" onClick={() => setIsEditing(false)}>
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsEditing(false)}
+                      >
                         <X className="h-4 w-4 mr-2" />
                         Cancel
                       </Button>
@@ -202,7 +232,10 @@ export default function ProfilePage() {
                       <h2 className="text-2xl font-bold text-gray-900">
                         {profileData.displayName || session.user?.name}
                       </h2>
-                      <Button onClick={() => setIsEditing(true)} variant="outline">
+                      <Button
+                        onClick={() => setIsEditing(true)}
+                        variant="outline"
+                      >
                         Edit Profile
                       </Button>
                     </div>
@@ -212,11 +245,11 @@ export default function ProfilePage() {
                         <Mail className="h-4 w-4" />
                         <span>{session.user?.email}</span>
                       </div>
-                      
+
                       {profileData.bio && (
                         <p className="text-gray-700">{profileData.bio}</p>
                       )}
-                      
+
                       <div className="flex items-center space-x-2 text-gray-600">
                         <Calendar className="h-4 w-4" />
                         <span>Joined {new Date().toLocaleDateString()}</span>
@@ -232,53 +265,65 @@ export default function ProfilePage() {
           <div className="space-y-6">
             {/* Stats Card */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Activity</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Your Activity
+              </h3>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Total Files</span>
-                  <span className="font-semibold text-gray-900">{userStats.totalFiles}</span>
+                  <span className="font-semibold text-gray-900">
+                    {userStats.totalFiles}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Storage Used</span>
-                  <span className="font-semibold text-gray-900">{userStats.totalStorage}</span>
+                  <span className="font-semibold text-gray-900">
+                    {userStats.totalStorage}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Files This Month</span>
-                  <span className="font-semibold text-gray-900">{userStats.filesThisMonth}</span>
+                  <span className="font-semibold text-gray-900">
+                    {userStats.filesThisMonth}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">AI Processed</span>
-                  <span className="font-semibold text-gray-900">{userStats.aiProcessedFiles}</span>
+                  <span className="font-semibold text-gray-900">
+                    {userStats.aiProcessedFiles}
+                  </span>
                 </div>
               </div>
             </div>
 
             {/* Quick Actions */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Quick Actions
+              </h3>
               <div className="space-y-3">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="w-full justify-start"
                   onClick={handleExportData}
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Export My Data
                 </Button>
-                
-                <Button 
-                  variant="outline" 
+
+                <Button
+                  variant="outline"
                   className="w-full justify-start"
-                  onClick={() => router.push('/dashboard')}
+                  onClick={() => router.push("/dashboard")}
                 >
                   <Archive className="h-4 w-4 mr-2" />
                   View All Files
                 </Button>
-                
-                <Button 
-                  variant="outline" 
+
+                <Button
+                  variant="outline"
                   className="w-full justify-start"
-                  onClick={() => router.push('/settings')}
+                  onClick={() => router.push("/settings")}
                 >
                   <Bell className="h-4 w-4 mr-2" />
                   Notification Settings
@@ -288,19 +333,21 @@ export default function ProfilePage() {
 
             {/* Danger Zone */}
             <div className="bg-white rounded-lg shadow-sm border border-red-200 p-6">
-              <h3 className="text-lg font-semibold text-red-600 mb-4">Danger Zone</h3>
+              <h3 className="text-lg font-semibold text-red-600 mb-4">
+                Danger Zone
+              </h3>
               <div className="space-y-3">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="w-full justify-start text-red-600 border-red-200 hover:bg-red-50"
                   onClick={() => signOut()}
                 >
                   <Shield className="h-4 w-4 mr-2" />
                   Sign Out
                 </Button>
-                
-                <Button 
-                  variant="outline" 
+
+                <Button
+                  variant="outline"
                   className="w-full justify-start text-red-600 border-red-200 hover:bg-red-50"
                   onClick={handleDeleteAccount}
                 >

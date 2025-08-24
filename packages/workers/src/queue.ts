@@ -1,20 +1,23 @@
-import { Queue } from 'bullmq';
-import Redis from 'ioredis';
+import { Queue } from "bullmq";
+import Redis from "ioredis";
 
 // Redis connection
-const connection = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
-  maxRetriesPerRequest: null, // Required for BullMQ
-});
+const connection = new Redis(
+  process.env.REDIS_URL || "redis://localhost:6379",
+  {
+    maxRetriesPerRequest: null, // Required for BullMQ
+  },
+);
 
 // AI Processing Queue
-export const aiQueue = new Queue('ai-processing', { 
+export const aiQueue = new Queue("ai-processing", {
   connection,
   defaultJobOptions: {
     removeOnComplete: 100,
     removeOnFail: 50,
     attempts: 3,
     backoff: {
-      type: 'exponential',
+      type: "exponential",
       delay: 2000,
     },
   },
@@ -28,14 +31,14 @@ export interface AIJobData {
 }
 
 export const addAIProcessingJob = async (data: AIJobData) => {
-  return await aiQueue.add('process-file', data, {
+  return await aiQueue.add("process-file", data, {
     priority: 1,
     delay: 1000, // 1 second delay to ensure file is saved
   });
 };
 
 // File cleanup queue for managing storage
-export const cleanupQueue = new Queue('file-cleanup', { 
+export const cleanupQueue = new Queue("file-cleanup", {
   connection,
   defaultJobOptions: {
     removeOnComplete: 10,
@@ -44,7 +47,7 @@ export const cleanupQueue = new Queue('file-cleanup', {
 });
 
 export const addCleanupJob = async (filePath: string, delay: number = 0) => {
-  return await cleanupQueue.add('cleanup-file', { filePath }, { delay });
+  return await cleanupQueue.add("cleanup-file", { filePath }, { delay });
 };
 
 export { connection };
