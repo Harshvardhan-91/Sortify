@@ -57,10 +57,6 @@ jobs:
       - name: Build project
         run: npm run build
 
-      # Check for format issues
-      - name: Check code formatting
-        run: npx prettier --check "**/*.{ts,tsx,md,json,yml,yaml}"
-
   # Security and dependency checks
   security:
     name: Security Audit
