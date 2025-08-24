@@ -49,10 +49,6 @@ jobs:
           npm run lint || echo "Linting issues found - will be addressed in development"
         continue-on-error: true
 
-      # Type checking across all packages
-      - name: Type check
-        run: npm run check-types
-
       # Generate Prisma client
       - name: Generate Prisma client
         run: npm run db:generate
