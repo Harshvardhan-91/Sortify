@@ -1,10 +1,9 @@
 import { Router } from "express";
 import multer from "multer";
-import path from "path";
-import fs from "fs/promises";
 import { prisma } from "@repo/db";
 import crypto from "crypto";
 import { authenticateToken } from "../middleware/auth.js";
+import S3Service from "../services/s3.js";
 
 // Mock AI processing for now
 const addAIProcessingJob = async (data: any) => {
@@ -22,19 +21,8 @@ const QueueMonitor = {
 
 const router = Router();
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: async (req, file, cb) => {
-    const uploadDir = process.env.UPLOAD_DIR || "./uploads";
-    await fs.mkdir(uploadDir, { recursive: true });
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = crypto.randomUUID();
-    const ext = path.extname(file.originalname);
-    cb(null, `${uniqueSuffix}${ext}`);
-  },
-});
+// Configure multer for file uploads (using memory storage for S3)
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
@@ -72,23 +60,30 @@ router.post(
       }
 
       const { folderId } = req.body;
-      const fileStats = await fs.stat(req.file.path);
+      const fileBuffer = req.file.buffer;
 
       // Calculate file checksum
-      const fileBuffer = await fs.readFile(req.file.path);
       const checksum = crypto
         .createHash("md5")
         .update(fileBuffer)
         .digest("hex");
 
+      // Upload to S3
+      const s3Key = await S3Service.uploadFile(
+        fileBuffer,
+        req.file.originalname,
+        req.file.mimetype,
+        req.userId
+      );
+
       // Save file metadata to database
       const file = await prisma.file.create({
         data: {
-          name: req.file.filename,
+          name: req.file.originalname,
           originalName: req.file.originalname,
           mimeType: req.file.mimetype,
-          size: fileStats.size,
-          pathOnDisk: req.file.path,
+          size: req.file.size,
+          pathOnDisk: s3Key, // Store S3 key instead of local path
           checksum,
           ownerId: req.userId,
           folderId: folderId || null,
@@ -100,7 +95,7 @@ router.post(
       try {
         await addAIProcessingJob({
           fileId: file.id,
-          filePath: req.file.path,
+          filePath: s3Key, // Pass S3 key to worker
           mimeType: req.file.mimetype,
           userId: req.userId,
         });
@@ -122,16 +117,6 @@ router.post(
       });
     } catch (error) {
       console.error("Upload error:", error);
-
-      // Clean up uploaded file on error
-      if (req.file?.path) {
-        try {
-          await fs.unlink(req.file.path);
-        } catch (cleanupError) {
-          console.error("Failed to cleanup file:", cleanupError);
-        }
-      }
-
       res.status(500).json({ error: "Upload failed" });
     }
   },
@@ -153,20 +138,27 @@ router.post(
 
       for (const file of req.files) {
         try {
-          const fileStats = await fs.stat(file.path);
-          const fileBuffer = await fs.readFile(file.path);
+          const fileBuffer = file.buffer;
           const checksum = crypto
             .createHash("md5")
             .update(fileBuffer)
             .digest("hex");
 
+          // Upload to S3
+          const s3Key = await S3Service.uploadFile(
+            fileBuffer,
+            file.originalname,
+            file.mimetype,
+            req.userId
+          );
+
           const savedFile = await prisma.file.create({
             data: {
-              name: file.filename,
+              name: file.originalname,
               originalName: file.originalname,
               mimeType: file.mimetype,
-              size: fileStats.size,
-              pathOnDisk: file.path,
+              size: file.size,
+              pathOnDisk: s3Key, // Store S3 key
               checksum,
               ownerId: req.userId,
               folderId: folderId || null,
@@ -177,7 +169,7 @@ router.post(
           // Queue for AI processing
           await addAIProcessingJob({
             fileId: savedFile.id,
-            filePath: file.path,
+            filePath: s3Key, // Pass S3 key
             mimeType: file.mimetype,
             userId: req.userId,
           });
@@ -194,12 +186,7 @@ router.post(
             `Failed to process file ${file.originalname}:`,
             fileError,
           );
-          // Clean up this file but continue with others
-          try {
-            await fs.unlink(file.path);
-          } catch (cleanupError) {
-            console.error("Failed to cleanup failed file:", cleanupError);
-          }
+          // Continue with other files even if one fails
         }
       }
 
@@ -215,6 +202,100 @@ router.post(
     }
   },
 );
+
+// Get signed URL for direct upload to S3
+router.post("/upload-url", authenticateToken, async (req: any, res) => {
+  try {
+    const { fileName, mimeType } = req.body;
+    
+    if (!fileName || !mimeType) {
+      return res.status(400).json({ error: "fileName and mimeType are required" });
+    }
+
+    const { url, key } = await S3Service.getSignedUploadUrl(
+      fileName,
+      mimeType,
+      req.userId
+    );
+
+    res.json({
+      success: true,
+      uploadUrl: url,
+      key: key,
+      fileName: fileName,
+    });
+  } catch (error) {
+    console.error("Generate upload URL error:", error);
+    res.status(500).json({ error: "Failed to generate upload URL" });
+  }
+});
+
+// Confirm upload completion (to save metadata after direct S3 upload)
+router.post("/confirm-upload", authenticateToken, async (req: any, res) => {
+  try {
+    const { key, fileName, mimeType, size, folderId } = req.body;
+    
+    if (!key || !fileName || !mimeType || !size) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // Get file metadata from S3 to verify upload
+    const metadata = await S3Service.getFileMetadata(key);
+    
+    if (!metadata) {
+      return res.status(400).json({ error: "File not found in S3" });
+    }
+
+    // Calculate checksum by downloading the file
+    const fileBuffer = await S3Service.getFileBuffer(key);
+    const checksum = crypto
+      .createHash("md5")
+      .update(fileBuffer)
+      .digest("hex");
+
+    // Save file metadata to database
+    const file = await prisma.file.create({
+      data: {
+        name: fileName,
+        originalName: fileName,
+        mimeType: mimeType,
+        size: size,
+        pathOnDisk: key, // Store S3 key
+        checksum,
+        ownerId: req.userId,
+        folderId: folderId || null,
+        processingStatus: "PENDING",
+      },
+    });
+
+    // Queue for AI processing
+    try {
+      await addAIProcessingJob({
+        fileId: file.id,
+        filePath: key, // Pass S3 key
+        mimeType: mimeType,
+        userId: req.userId,
+      });
+    } catch (queueError) {
+      console.error("Failed to queue AI processing:", queueError);
+    }
+
+    res.json({
+      success: true,
+      file: {
+        id: file.id,
+        name: file.originalName,
+        size: file.size,
+        mimeType: file.mimeType,
+        createdAt: file.createdAt,
+        processingStatus: file.processingStatus,
+      },
+    });
+  } catch (error) {
+    console.error("Confirm upload error:", error);
+    res.status(500).json({ error: "Failed to confirm upload" });
+  }
+});
 
 // Get user's files
 router.get("/", authenticateToken, async (req: any, res) => {
@@ -341,19 +422,11 @@ router.get("/:fileId/download", authenticateToken, async (req: any, res) => {
       return res.status(404).json({ error: "File not found" });
     }
 
-    // Check if file exists on disk
-    try {
-      await fs.access(file.pathOnDisk);
-    } catch {
-      return res.status(404).json({ error: "File not found on disk" });
-    }
-
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${file.originalName}"`,
-    );
-    res.setHeader("Content-Type", file.mimeType);
-    res.sendFile(path.resolve(file.pathOnDisk));
+    // Get signed URL from S3 for secure download
+    const downloadUrl = await S3Service.getSignedDownloadUrl(file.pathOnDisk);
+    
+    // Redirect to the signed URL for direct download
+    res.redirect(downloadUrl);
   } catch (error) {
     console.error("Download error:", error);
     res.status(500).json({ error: "Download failed" });
@@ -379,12 +452,12 @@ router.delete("/:fileId", authenticateToken, async (req: any, res) => {
       where: { id: req.params.fileId },
     });
 
-    // Delete from disk
+    // Delete from S3
     try {
-      await fs.unlink(file.pathOnDisk);
-    } catch (diskError) {
-      console.error("Failed to delete file from disk:", diskError);
-      // Don't fail the request if disk cleanup fails
+      await S3Service.deleteFile(file.pathOnDisk);
+    } catch (s3Error) {
+      console.error("Failed to delete file from S3:", s3Error);
+      // Don't fail the request if S3 cleanup fails
     }
 
     res.json({ success: true, message: "File deleted successfully" });

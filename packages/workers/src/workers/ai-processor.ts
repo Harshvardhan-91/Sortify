@@ -10,6 +10,7 @@ import {
   visionConfig,
   documentClassificationPatterns,
 } from "../config/vision-config.js";
+import WorkerS3Service from "../services/s3.js";
 
 // Initialize AI clients
 const openai = new OpenAI({
@@ -102,6 +103,17 @@ class AIProcessor {
     }
   }
 
+  /**
+   * Helper to get file buffer whether from S3 or local disk
+   */
+  private async getFileBuffer(filePath: string): Promise<Buffer> {
+    if (WorkerS3Service.isS3Path(filePath)) {
+      return await WorkerS3Service.getFileBuffer(filePath);
+    } else {
+      return await fs.readFile(filePath);
+    }
+  }
+
   async processImage(filePath: string) {
     try {
       console.log(`🖼️ Processing image with Google Cloud Vision: ${filePath}`);
@@ -118,9 +130,16 @@ class AIProcessor {
         };
       }
 
-      // Perform multiple types of analysis
-      const [labelResult] = await visionClient.labelDetection(filePath);
-      const [textResult] = await visionClient.textDetection(filePath);
+      // Get file buffer
+      const imageBuffer = await this.getFileBuffer(filePath);
+
+      // Perform multiple types of analysis using buffer
+      const [labelResult] = await visionClient.labelDetection({
+        image: { content: imageBuffer },
+      });
+      const [textResult] = await visionClient.textDetection({
+        image: { content: imageBuffer },
+      });
 
       // Object localization and logo detection (optional features)
       let objectAnnotations: any[] = [];
@@ -128,8 +147,9 @@ class AIProcessor {
 
       try {
         if (visionClient.objectLocalization) {
-          const [objectResult] =
-            await visionClient.objectLocalization(filePath);
+          const [objectResult] = await visionClient.objectLocalization({
+            image: { content: imageBuffer },
+          });
           objectAnnotations = objectResult.localizedObjectAnnotations || [];
         }
       } catch (error) {
@@ -138,7 +158,9 @@ class AIProcessor {
 
       try {
         if (visionClient.logoDetection) {
-          const [logoResult] = await visionClient.logoDetection(filePath);
+          const [logoResult] = await visionClient.logoDetection({
+            image: { content: imageBuffer },
+          });
           logoAnnotations = logoResult.logoAnnotations || [];
         }
       } catch (error) {
@@ -200,7 +222,7 @@ class AIProcessor {
 
   async processPDF(filePath: string) {
     try {
-      const fileBuffer = await fs.readFile(filePath);
+      const fileBuffer = await this.getFileBuffer(filePath);
       const pdfData = await pdfParse(fileBuffer);
       const text = pdfData.text;
 
@@ -225,7 +247,8 @@ class AIProcessor {
 
   async processText(filePath: string) {
     try {
-      const text = await fs.readFile(filePath, "utf-8");
+      const fileBuffer = await this.getFileBuffer(filePath);
+      const text = fileBuffer.toString('utf-8');
 
       const summary = await this.generateSummary(text);
       const keywords = this.extractKeywords(text);

@@ -12,6 +12,8 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.878.0",
+    "@aws-sdk/s3-request-presigner": "^3.878.0",
     "@google-cloud/vision": "^4.3.2",
     "@repo/db": "*",
     "bcryptjs": "^2.4.3",

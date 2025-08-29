@@ -18,6 +18,7 @@
     "test-vision": "tsx test-vision.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.878.0",
     "@google-cloud/vision": "^4.3.2",
     "@repo/db": "*",
     "bullmq": "^5.36.2",
