@@ -12,16 +12,15 @@ import {
   Filter,
   SortAsc,
   LogOut,
-  Brain,
-  Search,
-  FileText,
 } from "lucide-react";
-import { S3FileUpload, useFileUpload, AIFileCard } from "@repo/ui";
+import { S3FileUpload } from "@repo/ui/s3-file-upload";
 import { SearchBar } from "@repo/ui/search-bar";
 import { AISearch } from "@repo/ui/ai-search";
 import { FileTree } from "@repo/ui/file-tree";
+import { AIFileCard } from "@repo/ui/ai-file-card";
 import { Button } from "@repo/ui/button";
 import Image from "next/image";
+import { simulateAIProcessing } from "./ai-simulation";
 
 interface File {
   id: string;
@@ -32,6 +31,7 @@ interface File {
   updatedAt: string;
   aiTags?: string[];
   aiSummary?: string;
+  aiKeywords?: string[];
   processingStatus?: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
   folder?: {
     id: string;
@@ -127,33 +127,96 @@ export default function DashboardPage() {
 
     const loadData = async () => {
       try {
-        // Load files and folders from backend
-        const [filesResponse, foldersResponse] = await Promise.all([
-          fetch("/api/files"),
-          fetch("/api/folders"),
-        ]);
+        // In a real app, you would fetch from your API
+        console.log("Loading files and folders...");
+        
+        // Demo data with AI processing results
+        const demoFiles: File[] = [
+          {
+            id: 'demo-1',
+            name: 'Marketing_Strategy_2024.pdf',
+            size: 2450000,
+            mimeType: 'application/pdf',
+            createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+            updatedAt: new Date(Date.now() - 86400000).toISOString(),
+            processingStatus: 'COMPLETED',
+            aiTags: ['business', 'marketing', 'strategy', 'planning', '2024', 'commercial'],
+            aiSummary: 'Comprehensive marketing strategy document outlining plans for 2024, including target demographics, budget allocation, and campaign strategies across digital and traditional channels.',
+            aiKeywords: ['marketing', 'strategy', 'digital', 'campaigns', 'budget', 'ROI']
+          },
+          {
+            id: 'demo-2',
+            name: 'Product_Screenshot_Dashboard.png',
+            size: 1250000,
+            mimeType: 'image/png',
+            createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+            updatedAt: new Date(Date.now() - 172800000).toISOString(),
+            processingStatus: 'COMPLETED',
+            aiTags: ['screenshot', 'dashboard', 'ui', 'interface', 'analytics', 'charts'],
+            aiSummary: 'Dashboard interface screenshot showing analytics data with charts, graphs, and key performance indicators for business metrics monitoring.',
+            aiKeywords: ['dashboard', 'analytics', 'ui', 'charts', 'metrics', 'interface']
+          },
+          {
+            id: 'demo-3',
+            name: 'Meeting_Notes_Nov_2024.docx',
+            size: 150000,
+            mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            createdAt: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
+            updatedAt: new Date(Date.now() - 259200000).toISOString(),
+            processingStatus: 'PROCESSING',
+          },
+          {
+            id: 'demo-4',
+            name: 'Financial_Report_Q3.xlsx',
+            size: 850000,
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            createdAt: new Date(Date.now() - 345600000).toISOString(), // 4 days ago
+            updatedAt: new Date(Date.now() - 345600000).toISOString(),
+            processingStatus: 'PENDING',
+          }
+        ];
+        
+        const demoFolders: Folder[] = [
+          {
+            id: 'folder-1',
+            name: 'Marketing Materials',
+            fileCount: 12,
+            subfolderCount: 3
+          },
+          {
+            id: 'folder-2',
+            name: 'Project Documentation',
+            fileCount: 8,
+            subfolderCount: 2
+          }
+        ];
 
-        if (filesResponse.ok) {
-          const filesData = await filesResponse.json();
-          setFiles(filesData.files || []);
-        }
-
-        if (foldersResponse.ok) {
-          const foldersData = await foldersResponse.json();
-          setFolders(foldersData.folders || []);
-        }
+        setFiles(demoFiles);
+        setFolders(demoFolders);
+        
+        // Simulate processing completion for the processing file
+        setTimeout(() => {
+          setFiles(prev => prev.map(f => 
+            f.id === 'demo-3' 
+              ? { 
+                  ...f, 
+                  processingStatus: 'COMPLETED' as const,
+                  aiTags: ['meeting', 'notes', 'discussion', 'action-items', 'collaboration'],
+                  aiSummary: 'Meeting notes from November 2024 discussing project updates, action items, and team collaboration strategies.',
+                  aiKeywords: ['meeting', 'notes', 'action-items', 'collaboration', 'updates']
+                }
+              : f
+          ));
+        }, 3000);
       } catch (error) {
         console.error("Error loading data:", error);
-        // For now, set empty arrays if API calls fail
         setFiles([]);
         setFolders([]);
         setFileTree([]);
       } finally {
         setLoading(false);
       }
-    };
-
-    loadData();
+    };    loadData();
   }, [session]);
 
   // Build file tree when files or folders change
@@ -195,60 +258,39 @@ export default function DashboardPage() {
     // Here you would call your API to rename the item
   };
 
-  const handleFileUpload = async (uploadedFiles: globalThis.File[]) => {
-    console.log("Files uploaded:", uploadedFiles);
+  // AI Processing function
+  const processFileWithAI = async (fileId: string, file: { name: string; mimeType: string }) => {
+    // Set processing status
+    setFiles(prev => prev.map(f => 
+      f.id === fileId 
+        ? { ...f, processingStatus: 'PROCESSING' as const }
+        : f
+    ));
 
     try {
-      const formData = new FormData();
-      uploadedFiles.forEach((file) => {
-        formData.append("files", file);
-      });
-
-      const response = await fetch("/api/files", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log("Upload successful:", result);
-
-        // Add uploaded files to the state
-        if (result.files) {
-          setFiles((prev) => [...prev, ...result.files]);
-        }
-      } else {
-        console.error("Upload failed:", response.statusText);
-        // For demo purposes, add files to state anyway
-        const newFiles = uploadedFiles.map((file, index) => ({
-          id: `temp-${Date.now()}-${index}`,
-          name: file.name,
-          type: "file" as const,
-          size: file.size,
-          mimeType: file.type,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          url: URL.createObjectURL(file),
-        }));
-        setFiles((prev) => [...prev, ...newFiles]);
-      }
+      const aiResult = await simulateAIProcessing(file);
+      
+      // Update file with AI results
+      setFiles(prev => prev.map(f => 
+        f.id === fileId 
+          ? { 
+              ...f, 
+              processingStatus: 'COMPLETED' as const,
+              aiTags: aiResult.aiTags,
+              aiSummary: aiResult.aiSummary,
+              aiKeywords: aiResult.aiKeywords,
+              // ocrText: aiResult.ocrText 
+            }
+          : f
+      ));
     } catch (error) {
-      console.error("Upload error:", error);
-      // For demo purposes, add files to state anyway
-      const newFiles = uploadedFiles.map((file, index) => ({
-        id: `temp-${Date.now()}-${index}`,
-        name: file.name,
-        type: "file" as const,
-        size: file.size,
-        mimeType: file.type,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        url: URL.createObjectURL(file),
-      }));
-      setFiles((prev) => [...prev, ...newFiles]);
+      console.error('AI processing failed:', error);
+      setFiles(prev => prev.map(f => 
+        f.id === fileId 
+          ? { ...f, processingStatus: 'FAILED' as const }
+          : f
+      ));
     }
-
-    setShowUpload(false);
   };
 
   const handleSearch = (
@@ -291,11 +333,6 @@ export default function DashboardPage() {
   const handleFileDownload = (file: File) => {
     console.log("Downloading file:", file);
     // Here you would trigger file download
-  };
-
-  const handleFileShare = (file: File) => {
-    console.log("Sharing file:", file);
-    // Here you would open share dialog
   };
 
   const handleFileDelete = (file: File) => {
@@ -517,8 +554,17 @@ export default function DashboardPage() {
                         updatedAt={file.updatedAt}
                         aiTags={file.aiTags}
                         aiSummary={file.aiSummary}
+                        aiKeywords={file.aiKeywords}
                         processingStatus={file.processingStatus}
-                        onClick={() => handleFileClick(file)}
+                        onClick={() => {
+                          handleFileClick(file);
+                          // Handle selection
+                          setSelectedFiles(prev => 
+                            prev.includes(file.id) 
+                              ? prev.filter(id => id !== file.id)
+                              : [...prev, file.id]
+                          );
+                        }}
                         onDownload={() => handleFileDownload(file)}
                         onDelete={() => handleFileDelete(file)}
                         className={selectedFiles.includes(file.id) ? "ring-2 ring-blue-500 bg-blue-50" : ""}
@@ -574,7 +620,34 @@ export default function DashboardPage() {
                 </button>
               </div>
 
-              <FileUpload onUpload={handleFileUpload} />
+              <S3FileUpload 
+                onUpload={(uploadedFiles) => {
+                  console.log('Files uploaded:', uploadedFiles);
+                  // Convert uploaded files to our File interface
+                  const newFiles: File[] = uploadedFiles.map((upload) => ({
+                    id: upload.fileId || upload.id,
+                    name: upload.file.name,
+                    size: upload.file.size,
+                    mimeType: upload.file.type,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    processingStatus: 'PENDING'
+                  }));
+                  
+                  // Add files to state
+                  setFiles(prev => [...prev, ...newFiles]);
+                  
+                  // Start AI processing for each file
+                  newFiles.forEach(file => {
+                    processFileWithAI(file.id, { name: file.name, mimeType: file.mimeType });
+                  });
+                  
+                  setShowUpload(false);
+                }}
+                maxFiles={5}
+                maxSize={100 * 1024 * 1024} // 100MB
+                className="w-full"
+              />
             </div>
           </div>
         </div>

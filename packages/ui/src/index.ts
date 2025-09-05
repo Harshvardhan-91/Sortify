@@ -17,8 +17,5 @@ export { AISearch } from "./ai-search";
 export { Gradient } from "./gradient";
 export { TurborepoLogo } from "./turborepo-logo";
 
-// Hooks
-export { useFileUpload } from "./use-file-upload";
-
 // Utilities
 export { cn } from "./utils";
