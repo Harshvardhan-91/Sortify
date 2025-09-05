@@ -12,6 +12,37 @@ import {
   Filter,
   SortAsc,
   LogOut,
+  Plus,
+  FolderPlus,
+  FileText,
+  Image as ImageIcon,
+  Video,
+  Music,
+  Archive,
+  Brain,
+  Star,
+  Clock,
+  Trash2,
+  Cloud,
+  HardDrive,
+  Zap,
+  BarChart3,
+  Users,
+  Shield,
+  Download,
+  Share2,
+  Camera,
+  Mic,
+  FileCode,
+  PieChart,
+  TrendingUp,
+  Sparkles,
+  Bot,
+  Scan,
+  Search,
+  Home,
+  ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 import { S3FileUpload } from "@repo/ui/s3-file-upload";
 import { SearchBar } from "@repo/ui/search-bar";
@@ -74,6 +105,10 @@ export default function DashboardPage() {
   const [showUpload, setShowUpload] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [showNewDropdown, setShowNewDropdown] = useState(false);
+  const [activeSidebarItem, setActiveSidebarItem] = useState("home");
+  const [storageUsed, setStorageUsed] = useState(5.2); // GB
+  const [storageTotal] = useState(15); // GB
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -98,8 +133,6 @@ export default function DashboardPage() {
         createdAt: new Date(),
         updatedAt: new Date(),
         children: [],
-        tags: [],
-        isStarred: false,
       });
     });
 
@@ -113,8 +146,6 @@ export default function DashboardPage() {
         mimeType: file.mimeType,
         createdAt: new Date(file.createdAt),
         updatedAt: new Date(file.updatedAt),
-        tags: file.aiTags || [],
-        isStarred: false,
       });
     });
 
@@ -216,7 +247,9 @@ export default function DashboardPage() {
       } finally {
         setLoading(false);
       }
-    };    loadData();
+    };
+
+    loadData();
   }, [session]);
 
   // Build file tree when files or folders change
@@ -225,6 +258,40 @@ export default function DashboardPage() {
     setFileTree(treeData);
     setFilteredFiles(files); // Initialize filtered files
   }, [files, folders]);
+
+  // AI Processing function
+  const processFileWithAI = async (fileId: string, file: { name: string; mimeType: string }) => {
+    // Set processing status
+    setFiles(prev => prev.map(f => 
+      f.id === fileId 
+        ? { ...f, processingStatus: 'PROCESSING' as const }
+        : f
+    ));
+
+    try {
+      const aiResult = await simulateAIProcessing(file);
+      
+      // Update file with AI results
+      setFiles(prev => prev.map(f => 
+        f.id === fileId 
+          ? { 
+              ...f, 
+              processingStatus: 'COMPLETED' as const,
+              aiTags: aiResult.aiTags,
+              aiSummary: aiResult.aiSummary,
+              aiKeywords: aiResult.aiKeywords,
+            }
+          : f
+      ));
+    } catch (error) {
+      console.error('AI processing failed:', error);
+      setFiles(prev => prev.map(f => 
+        f.id === fileId 
+          ? { ...f, processingStatus: 'FAILED' as const }
+          : f
+      ));
+    }
+  };
 
   // File tree handlers
   const handleTreeItemSelect = (id: string, multiSelect?: boolean) => {
@@ -256,41 +323,6 @@ export default function DashboardPage() {
   const handleRenameItem = (id: string, newName: string) => {
     console.log("Renaming item:", id, "to:", newName);
     // Here you would call your API to rename the item
-  };
-
-  // AI Processing function
-  const processFileWithAI = async (fileId: string, file: { name: string; mimeType: string }) => {
-    // Set processing status
-    setFiles(prev => prev.map(f => 
-      f.id === fileId 
-        ? { ...f, processingStatus: 'PROCESSING' as const }
-        : f
-    ));
-
-    try {
-      const aiResult = await simulateAIProcessing(file);
-      
-      // Update file with AI results
-      setFiles(prev => prev.map(f => 
-        f.id === fileId 
-          ? { 
-              ...f, 
-              processingStatus: 'COMPLETED' as const,
-              aiTags: aiResult.aiTags,
-              aiSummary: aiResult.aiSummary,
-              aiKeywords: aiResult.aiKeywords,
-              // ocrText: aiResult.ocrText 
-            }
-          : f
-      ));
-    } catch (error) {
-      console.error('AI processing failed:', error);
-      setFiles(prev => prev.map(f => 
-        f.id === fileId 
-          ? { ...f, processingStatus: 'FAILED' as const }
-          : f
-      ));
-    }
   };
 
   const handleSearch = (
@@ -337,7 +369,6 @@ export default function DashboardPage() {
 
   const handleFileDelete = (file: File) => {
     console.log("Deleting file:", file);
-    // Here you would delete the file
     setFiles((prev) => prev.filter((f) => f.id !== file.id));
   };
 
@@ -345,8 +376,8 @@ export default function DashboardPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading your files...</p>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading your dashboard...</p>
         </div>
       </div>
     );
@@ -354,195 +385,393 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
+      {/* Modern Header */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-3">
-                <Image
-                  src="/logo.png"
-                  alt="Sortify Logo"
-                  width={40}
-                  height={40}
-                  className="h-10 w-10"
-                />
-                <div>
-                  <span className="text-2xl font-bold text-gray-900">
-                    Sortify
-                  </span>
-                  <p className="text-xs text-gray-500 -mt-1">
-                    AI-Powered Personal Cloud Storage
-                  </p>
+            {/* Logo and Brand */}
+            <div className="flex items-center">
+              <div className="flex-shrink-0 flex items-center">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">S</span>
+                </div>
+                <div className="ml-3">
+                  <h1 className="text-lg font-semibold text-gray-900">Sortify</h1>
+                  <p className="text-xs text-gray-500">AI-Powered Cloud Storage</p>
                 </div>
               </div>
             </div>
 
+            {/* Search Bar */}
             <div className="flex-1 max-w-2xl mx-8">
-              <SearchBar
-                value={searchQuery}
+              <AISearch
                 onSearch={handleSearch}
-                onClear={() => setSearchQuery("")}
-                placeholder="Search files, folders, or ask AI about your content..."
+                className="w-full"
+                recentSearches={["documents", "images", "receipts"]}
               />
             </div>
 
+            {/* Right Actions */}
             <div className="flex items-center space-x-4">
               <Button
                 onClick={() => setShowUpload(true)}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2"
               >
                 <Upload className="h-4 w-4 mr-2" />
                 Upload
               </Button>
-
-              {/* User Menu */}
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={() => router.push("/profile")}
-                  className="flex items-center space-x-2 p-1 rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <Image
-                    src={session.user?.image || "/default-avatar.png"}
-                    alt={session.user?.name || "User avatar"}
-                    width={32}
-                    height={32}
-                    className="h-8 w-8 rounded-full ring-2 ring-gray-200 hover:ring-blue-300 transition-all"
-                  />
-                  <div className="hidden md:block text-left">
-                    <p className="text-sm font-medium text-gray-900">
-                      {session.user?.name}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {session.user?.email}
-                    </p>
-                  </div>
-                </button>
-
-                <Button
-                  onClick={() => router.push("/settings")}
-                  variant="outline"
-                  size="sm"
-                  className="text-gray-600 hover:text-gray-900"
-                  title="Settings"
-                >
-                  <Settings className="h-4 w-4" />
-                </Button>
-
-                <Button
-                  onClick={() => signOut()}
-                  variant="outline"
-                  size="sm"
-                  className="text-gray-600 hover:text-gray-900"
-                  title="Sign Out"
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </div>
-
-              <div className="flex items-center space-x-2 border border-gray-200 rounded-lg p-1">
-                <button
-                  onClick={() => setView("grid")}
-                  className={`p-1.5 rounded ${view === "grid" ? "bg-blue-100 text-blue-600" : "text-gray-400 hover:text-gray-600"}`}
-                >
-                  <Grid className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setView("list")}
-                  className={`p-1.5 rounded ${view === "list" ? "bg-blue-100 text-blue-600" : "text-gray-400 hover:text-gray-600"}`}
-                >
-                  <List className="h-4 w-4" />
-                </button>
-              </div>
+              
+              {session?.user?.image && (
+                <Image
+                  src={session.user.image}
+                  alt="Profile"
+                  width={32}
+                  height={32}
+                  className="rounded-full"
+                />
+              )}
+              
+              <Button
+                onClick={() => signOut()}
+                variant="ghost"
+                size="sm"
+                className="text-gray-600 hover:text-gray-900"
+                title="Sign Out"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </div>
       </header>
 
+      {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex gap-6">
-          {/* Enhanced File Tree Sidebar */}
+        <div className="flex gap-8">
+          {/* Advanced Sidebar */}
           <div className="w-80 flex-shrink-0">
-            <div className="sticky top-8 space-y-4">
-              {/* Quick Actions */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <h3 className="font-medium text-gray-900 mb-3">
-                  Quick Actions
-                </h3>
-                <div className="space-y-2">
+            <div className="sticky top-24 space-y-4">
+              
+              {/* New Button with Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowNewDropdown(!showNewDropdown)}
+                  className="w-full bg-white border border-gray-300 hover:bg-gray-50 rounded-xl px-6 py-4 flex items-center justify-between shadow-sm transition-all hover:shadow-md"
+                >
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-4">
+                      <Plus className="h-5 w-5 text-white" />
+                    </div>
+                    <span className="font-semibold text-gray-900 text-lg">New</span>
+                  </div>
+                  <ChevronDown 
+                    className={`h-5 w-5 text-gray-400 transition-transform ${showNewDropdown ? 'rotate-180' : ''}`} 
+                  />
+                </button>
+
+                {/* Dropdown Menu */}
+                {showNewDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
+                    <button
+                      onClick={() => {
+                        setShowUpload(true);
+                        setShowNewDropdown(false);
+                      }}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center"
+                    >
+                      <Upload className="h-5 w-5 mr-3 text-blue-600" />
+                      <div>
+                        <div className="font-medium text-gray-900">File upload</div>
+                        <div className="text-xs text-gray-500">Upload documents, images, videos</div>
+                      </div>
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        handleCreateFolder();
+                        setShowNewDropdown(false);
+                      }}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center"
+                    >
+                      <FolderPlus className="h-5 w-5 mr-3 text-yellow-600" />
+                      <div>
+                        <div className="font-medium text-gray-900">New folder</div>
+                        <div className="text-xs text-gray-500">Organize your files</div>
+                      </div>
+                    </button>
+
+                    <hr className="my-2" />
+
+                    <button className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center">
+                      <FileText className="h-5 w-5 mr-3 text-blue-600" />
+                      <div>
+                        <div className="font-medium text-gray-900">AI Document</div>
+                        <div className="text-xs text-gray-500">Create with AI assistance</div>
+                      </div>
+                    </button>
+
+                    <button className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center">
+                      <Scan className="h-5 w-5 mr-3 text-green-600" />
+                      <div>
+                        <div className="font-medium text-gray-900">Scan Document</div>
+                        <div className="text-xs text-gray-500">Camera scan with OCR</div>
+                      </div>
+                    </button>
+
+                    <button className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center">
+                      <Mic className="h-5 w-5 mr-3 text-red-600" />
+                      <div>
+                        <div className="font-medium text-gray-900">Voice Note</div>
+                        <div className="text-xs text-gray-500">Record and transcribe</div>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Navigation Menu */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <nav className="py-2">
                   <button
-                    onClick={() => setShowUpload(true)}
-                    className="w-full flex items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 rounded-md"
+                    onClick={() => setActiveSidebarItem("home")}
+                    className={`w-full px-6 py-3 text-left flex items-center hover:bg-gray-50 transition-colors ${
+                      activeSidebarItem === "home" ? "bg-blue-50 border-r-4 border-blue-600" : ""
+                    }`}
                   >
-                    <Upload className="h-4 w-4 mr-3 text-blue-600" />
-                    Upload Files
+                    <Home className={`h-5 w-5 mr-4 ${activeSidebarItem === "home" ? "text-blue-600" : "text-gray-600"}`} />
+                    <span className={`font-medium ${activeSidebarItem === "home" ? "text-blue-900" : "text-gray-900"}`}>
+                      Home
+                    </span>
                   </button>
+
                   <button
-                    onClick={() => handleCreateFolder()}
-                    className="w-full flex items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 rounded-md"
+                    onClick={() => setActiveSidebarItem("my-drive")}
+                    className={`w-full px-6 py-3 text-left flex items-center hover:bg-gray-50 transition-colors ${
+                      activeSidebarItem === "my-drive" ? "bg-blue-50 border-r-4 border-blue-600" : ""
+                    }`}
                   >
-                    <Folder className="h-4 w-4 mr-3 text-green-600" />
-                    New Folder
+                    <HardDrive className={`h-5 w-5 mr-4 ${activeSidebarItem === "my-drive" ? "text-blue-600" : "text-gray-600"}`} />
+                    <span className={`font-medium ${activeSidebarItem === "my-drive" ? "text-blue-900" : "text-gray-900"}`}>
+                      My Sortify
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveSidebarItem("ai-insights")}
+                    className={`w-full px-6 py-3 text-left flex items-center hover:bg-gray-50 transition-colors ${
+                      activeSidebarItem === "ai-insights" ? "bg-purple-50 border-r-4 border-purple-600" : ""
+                    }`}
+                  >
+                    <Brain className={`h-5 w-5 mr-4 ${activeSidebarItem === "ai-insights" ? "text-purple-600" : "text-gray-600"}`} />
+                    <span className={`font-medium ${activeSidebarItem === "ai-insights" ? "text-purple-900" : "text-gray-900"}`}>
+                      AI Insights
+                    </span>
+                    <Sparkles className="h-3 w-3 ml-auto text-purple-500" />
+                  </button>
+
+                  <button
+                    onClick={() => setActiveSidebarItem("smart-search")}
+                    className={`w-full px-6 py-3 text-left flex items-center hover:bg-gray-50 transition-colors ${
+                      activeSidebarItem === "smart-search" ? "bg-green-50 border-r-4 border-green-600" : ""
+                    }`}
+                  >
+                    <Search className={`h-5 w-5 mr-4 ${activeSidebarItem === "smart-search" ? "text-green-600" : "text-gray-600"}`} />
+                    <span className={`font-medium ${activeSidebarItem === "smart-search" ? "text-green-900" : "text-gray-900"}`}>
+                      Smart Search
+                    </span>
+                  </button>
+                </nav>
+
+                <hr className="border-gray-200" />
+
+                <nav className="py-2">
+                  <button
+                    onClick={() => setActiveSidebarItem("shared")}
+                    className={`w-full px-6 py-3 text-left flex items-center hover:bg-gray-50 transition-colors ${
+                      activeSidebarItem === "shared" ? "bg-blue-50 border-r-4 border-blue-600" : ""
+                    }`}
+                  >
+                    <Users className={`h-5 w-5 mr-4 ${activeSidebarItem === "shared" ? "text-blue-600" : "text-gray-600"}`} />
+                    <span className={`font-medium ${activeSidebarItem === "shared" ? "text-blue-900" : "text-gray-900"}`}>
+                      Shared with me
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveSidebarItem("recent")}
+                    className={`w-full px-6 py-3 text-left flex items-center hover:bg-gray-50 transition-colors ${
+                      activeSidebarItem === "recent" ? "bg-blue-50 border-r-4 border-blue-600" : ""
+                    }`}
+                  >
+                    <Clock className={`h-5 w-5 mr-4 ${activeSidebarItem === "recent" ? "text-blue-600" : "text-gray-600"}`} />
+                    <span className={`font-medium ${activeSidebarItem === "recent" ? "text-blue-900" : "text-gray-900"}`}>
+                      Recent
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveSidebarItem("starred")}
+                    className={`w-full px-6 py-3 text-left flex items-center hover:bg-gray-50 transition-colors ${
+                      activeSidebarItem === "starred" ? "bg-yellow-50 border-r-4 border-yellow-600" : ""
+                    }`}
+                  >
+                    <Star className={`h-5 w-5 mr-4 ${activeSidebarItem === "starred" ? "text-yellow-600" : "text-gray-600"}`} />
+                    <span className={`font-medium ${activeSidebarItem === "starred" ? "text-yellow-900" : "text-gray-900"}`}>
+                      Starred
+                    </span>
+                  </button>
+                </nav>
+
+                <hr className="border-gray-200" />
+
+                <nav className="py-2">
+                  <button
+                    onClick={() => setActiveSidebarItem("trash")}
+                    className={`w-full px-6 py-3 text-left flex items-center hover:bg-gray-50 transition-colors ${
+                      activeSidebarItem === "trash" ? "bg-red-50 border-r-4 border-red-600" : ""
+                    }`}
+                  >
+                    <Trash2 className={`h-5 w-5 mr-4 ${activeSidebarItem === "trash" ? "text-red-600" : "text-gray-600"}`} />
+                    <span className={`font-medium ${activeSidebarItem === "trash" ? "text-red-900" : "text-gray-900"}`}>
+                      Trash
+                    </span>
+                  </button>
+                </nav>
+              </div>
+
+              {/* AI Analytics Card */}
+              <div className="bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl p-6 text-white">
+                <div className="flex items-center mb-4">
+                  <Bot className="h-6 w-6 mr-3" />
+                  <h3 className="font-semibold">AI Analytics</h3>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-purple-100 text-sm">Files Processed</span>
+                    <span className="font-semibold">{files.filter(f => f.processingStatus === 'COMPLETED').length}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-purple-100 text-sm">Tags Generated</span>
+                    <span className="font-semibold">{files.reduce((acc, f) => acc + (f.aiTags?.length || 0), 0)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-purple-100 text-sm">Smart Insights</span>
+                    <span className="font-semibold">12</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Storage Usage */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-gray-900">Storage</h3>
+                  <Cloud className="h-5 w-5 text-gray-600" />
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">{storageUsed} GB of {storageTotal} GB used</span>
+                    <span className="text-gray-900 font-medium">{Math.round((storageUsed / storageTotal) * 100)}%</span>
+                  </div>
+                  
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all"
+                      style={{ width: `${(storageUsed / storageTotal) * 100}%` }}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-2" />
+                      <span className="text-gray-600">Documents</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2" />
+                      <span className="text-gray-600">Images</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full mr-2" />
+                      <span className="text-gray-600">Videos</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full mr-2" />
+                      <span className="text-gray-600">Other</span>
+                    </div>
+                  </div>
+
+                  <button className="w-full mt-4 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium py-2 px-4 rounded-lg transition-colors text-sm">
+                    Upgrade Storage
                   </button>
                 </div>
               </div>
 
-              {/* File Tree */}
-              <FileTree
-                files={fileTree}
-                selectedItems={selectedTreeItems}
-                onSelectItem={handleTreeItemSelect}
-                onCreateFolder={handleCreateFolder}
-                onUploadFile={handleUploadToFolder}
-                onDeleteItem={handleDeleteItem}
-                onRenameItem={handleRenameItem}
-                className="h-[calc(100vh-20rem)] rounded-lg shadow-sm"
-              />
             </div>
           </div>
 
-          {/* Main Content */}
+          {/* Main Content Area */}
           <div className="flex-1 min-w-0">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              {/* Enhanced Header - Google Drive Style */}
-              <div className="border-b border-gray-200 bg-white px-6 py-4">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+              {/* Content Header */}
+              <div className="border-b border-gray-200 px-6 py-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h1 className="text-2xl font-medium text-gray-900">
-                      My Sortify
-                    </h1>
+                    <h2 className="text-xl font-semibold text-gray-900">My Files</h2>
                     <p className="text-sm text-gray-500 mt-1">
-                      {filteredFiles.length} file
-                      {filteredFiles.length !== 1 ? "s" : ""}
-                      {selectedFiles.length > 0 &&
-                        ` • ${selectedFiles.length} selected`}
+                      {filteredFiles.length} file{filteredFiles.length !== 1 ? "s" : ""}
+                      {selectedFiles.length > 0 && (
+                        <span className="ml-2 text-blue-600">
+                          • {selectedFiles.length} selected
+                        </span>
+                      )}
                     </p>
                   </div>
 
                   <div className="flex items-center space-x-3">
-                    <AISearch
-                      onSearch={handleSearch}
-                      className="w-80"
-                      recentSearches={["documents", "images", "receipts"]}
-                    />
-                    <div className="flex items-center space-x-2">
-                      <button className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                        <Filter className="h-4 w-4" />
-                        <span>Filter</span>
+                    <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                      <button
+                        onClick={() => setView("grid")}
+                        className={`p-2 rounded-md transition-colors ${
+                          view === "grid" 
+                            ? "bg-white text-gray-900 shadow-sm" 
+                            : "text-gray-500 hover:text-gray-700"
+                        }`}
+                      >
+                        <Grid className="h-4 w-4" />
                       </button>
-                      <button className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                        <SortAsc className="h-4 w-4" />
-                        <span>Sort</span>
+                      <button
+                        onClick={() => setView("list")}
+                        className={`p-2 rounded-md transition-colors ${
+                          view === "list" 
+                            ? "bg-white text-gray-900 shadow-sm" 
+                            : "text-gray-500 hover:text-gray-700"
+                        }`}
+                      >
+                        <List className="h-4 w-4" />
                       </button>
                     </div>
+
+                    <Button variant="outline" size="sm">
+                      <Filter className="h-4 w-4 mr-2" />
+                      Filter
+                    </Button>
+                    
+                    <Button variant="outline" size="sm">
+                      <SortAsc className="h-4 w-4 mr-2" />
+                      Sort
+                    </Button>
                   </div>
                 </div>
               </div>
 
-              {/* Content */}
+              {/* File Content */}
               <div className="p-6">
                 {filteredFiles.length > 0 ? (
-                  <div className={view === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" : "space-y-2"}>
+                  <div className={
+                    view === "grid" 
+                      ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" 
+                      : "space-y-4"
+                  }>
                     {filteredFiles.map((file) => (
                       <AIFileCard
                         key={file.id}
@@ -567,12 +796,16 @@ export default function DashboardPage() {
                         }}
                         onDownload={() => handleFileDownload(file)}
                         onDelete={() => handleFileDelete(file)}
-                        className={selectedFiles.includes(file.id) ? "ring-2 ring-blue-500 bg-blue-50" : ""}
+                        className={
+                          selectedFiles.includes(file.id) 
+                            ? "ring-2 ring-blue-500 bg-blue-50" 
+                            : ""
+                        }
                       />
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-16">
+                  <div className="text-center py-20">
                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Upload className="h-8 w-8 text-gray-400" />
                     </div>
@@ -580,12 +813,11 @@ export default function DashboardPage() {
                       No files yet
                     </h3>
                     <p className="text-gray-600 mb-6 max-w-sm mx-auto">
-                      Get started by uploading your first file or creating a new
-                      folder
+                      Get started by uploading your first file or creating a new folder
                     </p>
                     <Button
                       onClick={() => setShowUpload(true)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5"
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3"
                     >
                       <Upload className="h-4 w-4 mr-2" />
                       Upload Files
@@ -601,22 +833,28 @@ export default function DashboardPage() {
       {/* Upload Modal */}
       {showUpload && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center">
             <div
-              className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
+              className="fixed inset-0 transition-opacity bg-black bg-opacity-50"
               onClick={() => setShowUpload(false)}
-            ></div>
+            />
 
-            <div className="inline-block w-full max-w-2xl p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-2xl">
+            <div className="relative inline-block w-full max-w-2xl p-8 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-2xl rounded-2xl">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-medium leading-6 text-gray-900">
-                  Upload Files
-                </h3>
+                <div>
+                  <h3 className="text-2xl font-semibold text-gray-900">
+                    Upload Files
+                  </h3>
+                  <p className="text-gray-600 mt-1">
+                    Add files to your Sortify storage with AI processing
+                  </p>
+                </div>
                 <button
                   onClick={() => setShowUpload(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  <span className="sr-only">Close</span>✕
+                  <span className="sr-only">Close</span>
+                  ✕
                 </button>
               </div>
 
@@ -644,7 +882,7 @@ export default function DashboardPage() {
                   
                   setShowUpload(false);
                 }}
-                maxFiles={5}
+                maxFiles={10}
                 maxSize={100 * 1024 * 1024} // 100MB
                 className="w-full"
               />
