@@ -48,7 +48,6 @@ import { S3FileUpload } from "@repo/ui/s3-file-upload";
 import { SearchBar } from "@repo/ui/search-bar";
 import { AISearch } from "@repo/ui/ai-search";
 import { FileTree } from "@repo/ui/file-tree";
-import { AIFileCard } from "@repo/ui/ai-file-card";
 import { Button } from "@repo/ui/button";
 import Image from "next/image";
 import { simulateAIProcessing } from "./ai-simulation";
@@ -109,6 +108,10 @@ export default function DashboardPage() {
   const [activeSidebarItem, setActiveSidebarItem] = useState("home");
   const [storageUsed, setStorageUsed] = useState(5.2); // GB
   const [storageTotal] = useState(15); // GB
+  const [starredFiles, setStarredFiles] = useState<string[]>([]);
+  const [trashedFiles, setTrashedFiles] = useState<File[]>([]);
+  const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -293,6 +296,36 @@ export default function DashboardPage() {
     }
   };
 
+  // Helper functions for different sections
+  const getCurrentSectionFiles = () => {
+    switch (activeSidebarItem) {
+      case "starred":
+        return files.filter(f => starredFiles.includes(f.id));
+      case "recent":
+        return [...files].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).slice(0, 20);
+      case "trash":
+        return trashedFiles;
+      case "shared":
+        return []; // Would be implemented with shared files API
+      case "ai-insights":
+        return files.filter(f => f.processingStatus === 'COMPLETED');
+      default:
+        return filteredFiles;
+    }
+  };
+
+  const getSectionTitle = () => {
+    switch (activeSidebarItem) {
+      case "starred": return "Starred";
+      case "recent": return "Recent";
+      case "trash": return "Trash";
+      case "shared": return "Shared with me";
+      case "ai-insights": return "AI Insights";
+      case "smart-search": return "Smart Search";
+      default: return "My Files";
+    }
+  };
+
   // File tree handlers
   const handleTreeItemSelect = (id: string, multiSelect?: boolean) => {
     if (multiSelect) {
@@ -305,24 +338,35 @@ export default function DashboardPage() {
   };
 
   const handleCreateFolder = (parentId?: string) => {
-    console.log("Creating folder in:", parentId);
-    // Here you would call your API to create a new folder
+    setShowCreateFolderModal(true);
+  };
+
+  const createFolder = () => {
+    if (!newFolderName.trim()) return;
+    
+    const newFolder: Folder = {
+      id: `folder-${Date.now()}`,
+      name: newFolderName,
+      fileCount: 0,
+      subfolderCount: 0
+    };
+    
+    setFolders(prev => [...prev, newFolder]);
+    setNewFolderName("");
+    setShowCreateFolderModal(false);
   };
 
   const handleUploadToFolder = (parentId?: string) => {
     console.log("Uploading to folder:", parentId);
     setShowUpload(true);
-    // You could pass the parentId to the upload modal
   };
 
   const handleDeleteItem = (id: string) => {
     console.log("Deleting item:", id);
-    // Here you would call your API to delete the item
   };
 
   const handleRenameItem = (id: string, newName: string) => {
     console.log("Renaming item:", id, "to:", newName);
-    // Here you would call your API to rename the item
   };
 
   const handleSearch = (
@@ -367,9 +411,407 @@ export default function DashboardPage() {
     // Here you would trigger file download
   };
 
+  const handleStarFile = (file: File) => {
+    setStarredFiles(prev => 
+      prev.includes(file.id) 
+        ? prev.filter(id => id !== file.id)
+        : [...prev, file.id]
+    );
+  };
+
   const handleFileDelete = (file: File) => {
-    console.log("Deleting file:", file);
-    setFiles((prev) => prev.filter((f) => f.id !== file.id));
+    // Move to trash instead of permanent delete
+    setTrashedFiles(prev => [...prev, file]);
+    setFiles(prev => prev.filter(f => f.id !== file.id));
+  };
+
+  const handleRestoreFile = (file: File) => {
+    setFiles(prev => [...prev, file]);
+    setTrashedFiles(prev => prev.filter(f => f.id !== file.id));
+  };
+
+  const handlePermanentDelete = (file: File) => {
+    setTrashedFiles(prev => prev.filter(f => f.id !== file.id));
+  };
+
+  // Render content based on active sidebar section
+  const renderSectionContent = () => {
+    const sectionFiles = getCurrentSectionFiles();
+
+    // Empty states for different sections
+    const renderEmptyState = () => {
+      switch (activeSidebarItem) {
+        case "starred":
+          return (
+            <div className="text-center py-20">
+              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Star className="h-8 w-8 text-yellow-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No starred files
+              </h3>
+              <p className="text-gray-600 mb-6 max-w-sm mx-auto">
+                Add stars to files you want to easily find later
+              </p>
+            </div>
+          );
+        
+        case "trash":
+          return (
+            <div className="text-center py-20">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Trash is empty
+              </h3>
+              <p className="text-gray-600 mb-6 max-w-sm mx-auto">
+                Files in trash are permanently deleted after 30 days
+              </p>
+            </div>
+          );
+        
+        case "shared":
+          return (
+            <div className="text-center py-20">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Users className="h-8 w-8 text-blue-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No shared files
+              </h3>
+              <p className="text-gray-600 mb-6 max-w-sm mx-auto">
+                Files shared with you will appear here
+              </p>
+            </div>
+          );
+
+        case "ai-insights":
+          return (
+            <div className="text-center py-20">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Brain className="h-8 w-8 text-purple-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No AI insights yet
+              </h3>
+              <p className="text-gray-600 mb-6 max-w-sm mx-auto">
+                Upload files to get AI-powered insights and analysis
+              </p>
+              <Button
+                onClick={() => setShowUpload(true)}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Upload Files
+              </Button>
+            </div>
+          );
+
+        default:
+          return (
+            <div className="text-center py-20">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Upload className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No files yet
+              </h3>
+              <p className="text-gray-600 mb-6 max-w-sm mx-auto">
+                Get started by uploading your first file or creating a new folder
+              </p>
+              <Button
+                onClick={() => setShowUpload(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Upload Files
+              </Button>
+            </div>
+          );
+      }
+    };
+
+    // Special view for AI Insights
+    if (activeSidebarItem === "ai-insights" && sectionFiles.length > 0) {
+      return (
+        <div className="space-y-6">
+          {/* AI Insights Summary */}
+          <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-6">
+            <div className="flex items-center mb-4">
+              <Sparkles className="h-6 w-6 text-purple-600 mr-3" />
+              <h3 className="text-lg font-semibold text-gray-900">AI Analysis Summary</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-purple-600">{sectionFiles.length}</div>
+                <div className="text-sm text-gray-600">Files Analyzed</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">
+                  {sectionFiles.reduce((acc, f) => acc + (f.aiTags?.length || 0), 0)}
+                </div>
+                <div className="text-sm text-gray-600">Tags Generated</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {Math.round(sectionFiles.length / files.length * 100)}%
+                </div>
+                <div className="text-sm text-gray-600">Processing Rate</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Files Grid */}
+          <div className={
+            view === "grid" 
+              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" 
+              : "space-y-4"
+          }>
+            {sectionFiles.map((file) => (
+              <AIFileCard
+                key={file.id}
+                name={file.name}
+                size={file.size}
+                updatedAt={file.updatedAt}
+                aiTags={file.aiTags}
+                aiSummary={file.aiSummary}
+                processingStatus={file.processingStatus}
+                onClick={() => handleFileClick(file)}
+                onDownload={() => handleFileDownload(file)}
+                onDelete={() => handleFileDelete(file)}
+                className={
+                  selectedFiles.includes(file.id) 
+                    ? "ring-2 ring-blue-500 bg-blue-50" 
+                    : ""
+                }
+              />
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // Regular file grid view
+    if (sectionFiles.length > 0) {
+      return (
+        <div className={
+          view === "grid" 
+            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" 
+            : "space-y-4"
+        }>
+          {sectionFiles.map((file) => (
+            <AIFileCard
+              key={file.id}
+              name={file.name}
+              size={file.size}
+              updatedAt={file.updatedAt}
+              aiTags={file.aiTags}
+              aiSummary={file.aiSummary}
+              processingStatus={file.processingStatus}
+              onClick={() => {
+                handleFileClick(file);
+                setSelectedFiles(prev => 
+                  prev.includes(file.id) 
+                    ? prev.filter(id => id !== file.id)
+                    : [...prev, file.id]
+                );
+              }}
+              onDownload={() => handleFileDownload(file)}
+              onDelete={() => 
+                activeSidebarItem === "trash" 
+                  ? handlePermanentDelete(file)
+                  : handleFileDelete(file)
+              }
+              className={
+                selectedFiles.includes(file.id) 
+                  ? "ring-2 ring-blue-500 bg-blue-50" 
+                  : ""
+              }
+            />
+          ))}
+          
+          {/* Show restore button for trash items */}
+          {activeSidebarItem === "trash" && (
+            <div className="col-span-full mt-6 text-center">
+              <Button
+                onClick={() => {
+                  sectionFiles.forEach(file => handleRestoreFile(file));
+                }}
+                variant="outline"
+                className="mr-4"
+              >
+                Restore All
+              </Button>
+              <Button
+                onClick={() => {
+                  sectionFiles.forEach(file => handlePermanentDelete(file));
+                }}
+                variant="outline"
+                className="border-red-300 text-red-700 hover:bg-red-50"
+              >
+                Delete Permanently
+              </Button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return renderEmptyState();
+  };
+
+  // AI-enhanced file card component
+  const AIFileCard = ({ 
+    name, size, updatedAt, 
+    aiTags, aiSummary, processingStatus,
+    onClick, onDownload, onDelete, className 
+  }: {
+    name: string;
+    size: number;
+    updatedAt: string;
+    aiTags?: string[];
+    aiSummary?: string;
+    processingStatus?: string;
+    onClick: () => void;
+    onDownload: () => void;
+    onDelete: () => void;
+    className?: string;
+  }) => (
+    <div 
+      className={`border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-200 cursor-pointer group ${className}`}
+      onClick={onClick}
+    >
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+            <FileText className="h-5 w-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-medium text-gray-900 truncate">{name}</h3>
+            <p className="text-xs text-gray-500">
+              {formatFileSize(size)} • {new Date(updatedAt).toLocaleDateString()}
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDownload();
+            }}
+          >
+            <Download className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="text-red-600 hover:text-red-700"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* AI Processing Status */}
+      {processingStatus && (
+        <div className="mb-3">
+          <div className="flex items-center space-x-2">
+            <Brain className="h-4 w-4 text-purple-500" />
+            <span className="text-xs text-purple-700 font-medium">
+              {processingStatus === "processing" ? "AI Processing..." : "AI Analysis Complete"}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* AI Tags */}
+      {aiTags && aiTags.length > 0 && (
+        <div className="mb-3">
+          <div className="flex flex-wrap gap-1">
+            {aiTags.slice(0, 3).map((tag, index) => (
+              <span
+                key={index}
+                className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+              >
+                <Zap className="h-3 w-3 mr-1" />
+                {tag}
+              </span>
+            ))}
+            {aiTags.length > 3 && (
+              <span className="text-xs text-gray-500">
+                +{aiTags.length - 3} more
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* AI Summary */}
+      {aiSummary && (
+        <div className="mb-3">
+          <p className="text-sm text-gray-600 line-clamp-2">
+            {aiSummary}
+          </p>
+        </div>
+      )}
+
+      {/* AI Actions */}
+      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+        <div className="flex space-x-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-xs"
+            onClick={(e) => {
+              e.stopPropagation();
+              // Handle AI summary generation
+            }}
+          >
+            <Sparkles className="h-3 w-3 mr-1" />
+            AI Summary
+          </Button>
+        </div>
+        
+        <div className="flex items-center space-x-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              // Handle star toggle
+            }}
+          >
+            <Star className="h-3 w-3" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              // Handle share
+            }}
+          >
+            <Share2 className="h-3 w-3" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   if (loading || !session) {
@@ -709,16 +1151,16 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Main Content Area */}
+          {/* Dynamic Main Content Area */}
           <div className="flex-1 min-w-0">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200">
               {/* Content Header */}
               <div className="border-b border-gray-200 px-6 py-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-900">My Files</h2>
+                    <h2 className="text-xl font-semibold text-gray-900">{getSectionTitle()}</h2>
                     <p className="text-sm text-gray-500 mt-1">
-                      {filteredFiles.length} file{filteredFiles.length !== 1 ? "s" : ""}
+                      {getCurrentSectionFiles().length} file{getCurrentSectionFiles().length !== 1 ? "s" : ""}
                       {selectedFiles.length > 0 && (
                         <span className="ml-2 text-blue-600">
                           • {selectedFiles.length} selected
@@ -764,66 +1206,9 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* File Content */}
+              {/* Dynamic File Content */}
               <div className="p-6">
-                {filteredFiles.length > 0 ? (
-                  <div className={
-                    view === "grid" 
-                      ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" 
-                      : "space-y-4"
-                  }>
-                    {filteredFiles.map((file) => (
-                      <AIFileCard
-                        key={file.id}
-                        id={file.id}
-                        name={file.name}
-                        size={file.size}
-                        mimeType={file.mimeType}
-                        createdAt={file.createdAt}
-                        updatedAt={file.updatedAt}
-                        aiTags={file.aiTags}
-                        aiSummary={file.aiSummary}
-                        aiKeywords={file.aiKeywords}
-                        processingStatus={file.processingStatus}
-                        onClick={() => {
-                          handleFileClick(file);
-                          // Handle selection
-                          setSelectedFiles(prev => 
-                            prev.includes(file.id) 
-                              ? prev.filter(id => id !== file.id)
-                              : [...prev, file.id]
-                          );
-                        }}
-                        onDownload={() => handleFileDownload(file)}
-                        onDelete={() => handleFileDelete(file)}
-                        className={
-                          selectedFiles.includes(file.id) 
-                            ? "ring-2 ring-blue-500 bg-blue-50" 
-                            : ""
-                        }
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-20">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Upload className="h-8 w-8 text-gray-400" />
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      No files yet
-                    </h3>
-                    <p className="text-gray-600 mb-6 max-w-sm mx-auto">
-                      Get started by uploading your first file or creating a new folder
-                    </p>
-                    <Button
-                      onClick={() => setShowUpload(true)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3"
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload Files
-                    </Button>
-                  </div>
-                )}
+                {renderSectionContent()}
               </div>
             </div>
           </div>
