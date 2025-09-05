@@ -71,10 +71,15 @@ class AIProcessor {
         aiSummary = result.summary;
         aiKeywords = result.keywords;
         ocrText = result.text;
+        aiTags = result.aiTags || ["pdf", "document"];
       } else if (mimeType.startsWith("text/")) {
         const result = await this.processText(filePath);
         aiSummary = result.summary;
         aiKeywords = result.keywords;
+        aiTags = result.aiTags || ["text", "document"];
+      } else {
+        // Handle other file types with basic tagging
+        aiTags = await this.generateBasicTags(mimeType);
       }
 
       // Update file with AI results
@@ -189,24 +194,37 @@ class AIProcessor {
       // Combine all tags and remove duplicates
       const allTags = [...new Set([...labelTags, ...objectTags, ...logoTags])];
 
-      // Enhance tags with document-specific classifications
-      const enhancedTags = this.enhanceImageTags(
-        allTags,
-        textResult.textAnnotations?.[0]?.description || "",
-      );
-
       // Extract OCR text
       const ocrText = textResult.textAnnotations?.[0]?.description || "";
 
-      // Extract keywords from OCR text
-      const keywords = this.extractKeywords(ocrText);
+      // Generate AI tags for text content if OCR text is substantial
+      let aiTextTags: string[] = [];
+      if (ocrText.length > 100) {
+        aiTextTags = await this.generateAITags(ocrText, "image-with-text");
+      }
+
+      // Enhance tags with document-specific classifications
+      const enhancedTags = this.enhanceImageTags(allTags, ocrText);
+
+      // Combine all tags: Vision API + AI text analysis + enhancements
+      const combinedTags = [
+        "image",
+        ...enhancedTags,
+        ...aiTextTags
+      ];
+      const uniqueTags = [...new Set(combinedTags)];
+
+      // Extract keywords from OCR text using AI if available, fallback to basic
+      const keywords = ocrText.length > 50 
+        ? await this.generateAIKeywords(ocrText)
+        : this.extractKeywords(ocrText);
 
       console.log(
-        `✅ Image processing completed. Found ${enhancedTags.length} tags, ${keywords.length} keywords`,
+        `✅ Image processing completed. Found ${uniqueTags.length} tags, ${keywords.length} keywords`,
       );
 
       return {
-        tags: enhancedTags,
+        tags: uniqueTags,
         text: ocrText,
         keywords,
       };
@@ -227,21 +245,39 @@ class AIProcessor {
       const text = pdfData.text;
 
       if (text.length < 50) {
-        return { summary: null, keywords: [], text: text };
+        return { 
+          summary: null, 
+          keywords: [], 
+          text: text,
+          aiTags: ["pdf", "document"]
+        };
       }
 
-      const summary = await this.generateSummary(text);
+      // Generate AI-powered summary, tags, and keywords
+      const [summary, aiTags, aiKeywords] = await Promise.all([
+        this.generateSummary(text),
+        this.generateAITags(text, "pdf"),
+        this.generateAIKeywords(text)
+      ]);
 
-      const keywords = this.extractKeywords(text);
+      // Combine AI tags with basic PDF tags
+      const combinedTags = ["pdf", "document", ...aiTags];
+      const uniqueTags = [...new Set(combinedTags)];
 
       return {
         summary,
-        keywords,
+        keywords: aiKeywords,
         text: text.substring(0, 5000), // Store first 5000 chars
+        aiTags: uniqueTags
       };
     } catch (error) {
-      console.log(error);
-      return { summary: null, keywords: [], text: "" };
+      console.error("PDF processing error:", error);
+      return { 
+        summary: null, 
+        keywords: [], 
+        text: "",
+        aiTags: ["pdf", "document", "processing-failed"]
+      };
     }
   }
 
@@ -250,16 +286,37 @@ class AIProcessor {
       const fileBuffer = await this.getFileBuffer(filePath);
       const text = fileBuffer.toString('utf-8');
 
-      const summary = await this.generateSummary(text);
-      const keywords = this.extractKeywords(text);
+      if (text.length < 50) {
+        return { 
+          summary: null, 
+          keywords: [],
+          aiTags: ["text", "document"]
+        };
+      }
+
+      // Generate AI-powered summary, tags, and keywords
+      const [summary, aiTags, aiKeywords] = await Promise.all([
+        this.generateSummary(text),
+        this.generateAITags(text, "text"),
+        this.generateAIKeywords(text)
+      ]);
+
+      // Combine AI tags with basic text tags
+      const combinedTags = ["text", "document", ...aiTags];
+      const uniqueTags = [...new Set(combinedTags)];
 
       return {
         summary,
-        keywords,
+        keywords: aiKeywords,
+        aiTags: uniqueTags
       };
     } catch (error) {
       console.error("Text processing error:", error);
-      return { summary: null, keywords: [] };
+      return { 
+        summary: null, 
+        keywords: [],
+        aiTags: ["text", "document", "processing-failed"]
+      };
     }
   }
 
@@ -309,15 +366,183 @@ class AIProcessor {
     } catch (error: any) {
       // Check for specific OpenAI errors
       if (error.code === "insufficient_quota") {
-        console.log(error);
+        console.error("OpenAI quota exceeded:", error);
       } else if (error.code === "invalid_api_key") {
-        console.log(error);
+        console.error("Invalid OpenAI API key:", error);
       } else if (error.status === 429) {
-        console.log(error);
+        console.error("OpenAI rate limit exceeded:", error);
+      } else {
+        console.error("OpenAI API error:", error);
       }
 
       return null;
     }
+  }
+
+  /**
+   * Generate AI tags for text content using OpenAI
+   */
+  async generateAITags(text: string, fileType: string): Promise<string[]> {
+    try {
+      if (!text || text.length < 50) {
+        console.log(`Text too short for AI tagging (${text.length} chars)`);
+        return [];
+      }
+
+      if (!process.env.OPENAI_API_KEY) {
+        console.error("OpenAI API key not found");
+        return [];
+      }
+
+      // Truncate text to fit within token limits
+      const textToAnalyze = text.substring(0, 2000);
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert document classifier. Analyze the content and generate relevant tags that describe:
+1. Document type (e.g., invoice, receipt, contract, report, email, letter)
+2. Subject matter (e.g., finance, legal, medical, technical, personal)
+3. Content themes (e.g., urgent, confidential, quarterly, annual)
+4. Industry/domain (e.g., healthcare, education, technology, retail)
+
+Return exactly 5-10 relevant tags as a JSON array. Tags should be lowercase, single words or short phrases.
+File type context: ${fileType}`,
+          },
+          {
+            role: "user",
+            content: `Analyze this content and generate tags:\n\n${textToAnalyze}`,
+          },
+        ],
+        max_tokens: 100,
+        temperature: 0.2,
+        response_format: { type: "json_object" },
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        console.warn("OpenAI returned empty response for tagging");
+        return [];
+      }
+
+      try {
+        const parsed = JSON.parse(content);
+        const tags = parsed.tags || parsed.categories || parsed.keywords || [];
+        
+        if (Array.isArray(tags)) {
+          console.log(`Generated ${tags.length} AI tags:`, tags);
+          return tags.slice(0, 10); // Limit to 10 tags
+        }
+      } catch (parseError) {
+        console.warn("Failed to parse OpenAI tags response, falling back to text parsing");
+        // Fallback: extract tags from text response
+        const tagMatches = content.match(/["']([^"']+)["']/g);
+        if (tagMatches) {
+          return tagMatches.map(tag => tag.replace(/["']/g, '')).slice(0, 10);
+        }
+      }
+
+      return [];
+    } catch (error: any) {
+      console.error("OpenAI tagging error:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Generate contextual keywords from text using OpenAI
+   */
+  async generateAIKeywords(text: string): Promise<string[]> {
+    try {
+      if (!text || text.length < 100) {
+        return this.extractKeywords(text); // Fallback to basic extraction
+      }
+
+      if (!process.env.OPENAI_API_KEY) {
+        return this.extractKeywords(text); // Fallback to basic extraction
+      }
+
+      const textToAnalyze = text.substring(0, 1500);
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "system",
+            content: `Extract the most important keywords and key phrases from the text. Focus on:
+1. Main topics and subjects
+2. Important names, places, organizations
+3. Key concepts and technical terms
+4. Action items or important dates
+
+Return 8-15 keywords as a JSON array. Use single words or short phrases.`,
+          },
+          {
+            role: "user",
+            content: `Extract keywords from this text:\n\n${textToAnalyze}`,
+          },
+        ],
+        max_tokens: 80,
+        temperature: 0.1,
+        response_format: { type: "json_object" },
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        return this.extractKeywords(text); // Fallback
+      }
+
+      try {
+        const parsed = JSON.parse(content);
+        const keywords = parsed.keywords || parsed.terms || parsed.phrases || [];
+        
+        if (Array.isArray(keywords)) {
+          console.log(`Generated ${keywords.length} AI keywords:`, keywords);
+          return keywords.slice(0, 15);
+        }
+      } catch (parseError) {
+        console.warn("Failed to parse OpenAI keywords response");
+      }
+
+      return this.extractKeywords(text); // Fallback
+    } catch (error) {
+      console.error("OpenAI keyword extraction error:", error);
+      return this.extractKeywords(text); // Fallback
+    }
+  }
+
+  /**
+   * Generate basic tags based on file type when AI processing isn't applicable
+   */
+  async generateBasicTags(mimeType: string): Promise<string[]> {
+    const basicTags = ["file"];
+
+    if (mimeType.startsWith("image/")) {
+      basicTags.push("image");
+      if (mimeType.includes("jpeg") || mimeType.includes("jpg")) basicTags.push("photo");
+      if (mimeType.includes("png")) basicTags.push("graphic");
+      if (mimeType.includes("gif")) basicTags.push("animated");
+    } else if (mimeType.startsWith("video/")) {
+      basicTags.push("video", "media");
+    } else if (mimeType.startsWith("audio/")) {
+      basicTags.push("audio", "media");
+    } else if (mimeType.includes("pdf")) {
+      basicTags.push("pdf", "document");
+    } else if (mimeType.includes("word") || mimeType.includes("msword")) {
+      basicTags.push("word", "document", "office");
+    } else if (mimeType.includes("excel") || mimeType.includes("spreadsheet")) {
+      basicTags.push("excel", "spreadsheet", "office");
+    } else if (mimeType.includes("powerpoint") || mimeType.includes("presentation")) {
+      basicTags.push("powerpoint", "presentation", "office");
+    } else if (mimeType.startsWith("text/")) {
+      basicTags.push("text", "document");
+    } else if (mimeType.includes("zip") || mimeType.includes("archive")) {
+      basicTags.push("archive", "compressed");
+    }
+
+    return basicTags;
   }
 
   enhanceImageTags(baseTags: string[], ocrText: string): string[] {

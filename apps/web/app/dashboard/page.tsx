@@ -12,11 +12,13 @@ import {
   Filter,
   SortAsc,
   LogOut,
+  Brain,
+  Search,
+  FileText,
 } from "lucide-react";
-import { FileUpload } from "@repo/ui/file-upload";
+import { S3FileUpload, useFileUpload, AIFileCard } from "@repo/ui";
 import { SearchBar } from "@repo/ui/search-bar";
 import { AISearch } from "@repo/ui/ai-search";
-import { FileGrid } from "@repo/ui/file-grid";
 import { FileTree } from "@repo/ui/file-tree";
 import { Button } from "@repo/ui/button";
 import Image from "next/image";
@@ -503,17 +505,26 @@ export default function DashboardPage() {
               {/* Content */}
               <div className="p-6">
                 {filteredFiles.length > 0 ? (
-                  <FileGrid
-                    files={filteredFiles}
-                    onFileClick={handleFileClick}
-                    onDownload={handleFileDownload}
-                    onShare={handleFileShare}
-                    onDelete={handleFileDelete}
-                    selectedFiles={selectedFiles}
-                    onSelectionChange={setSelectedFiles}
-                    view={view}
-                    className="min-h-[400px]"
-                  />
+                  <div className={view === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" : "space-y-2"}>
+                    {filteredFiles.map((file) => (
+                      <AIFileCard
+                        key={file.id}
+                        id={file.id}
+                        name={file.name}
+                        size={file.size}
+                        mimeType={file.mimeType}
+                        createdAt={file.createdAt}
+                        updatedAt={file.updatedAt}
+                        aiTags={file.aiTags}
+                        aiSummary={file.aiSummary}
+                        processingStatus={file.processingStatus}
+                        onClick={() => handleFileClick(file)}
+                        onDownload={() => handleFileDownload(file)}
+                        onDelete={() => handleFileDelete(file)}
+                        className={selectedFiles.includes(file.id) ? "ring-2 ring-blue-500 bg-blue-50" : ""}
+                      />
+                    ))}
+                  </div>
                 ) : (
                   <div className="text-center py-16">
                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
