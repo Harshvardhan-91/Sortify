@@ -659,7 +659,7 @@ export default function DashboardPage() {
           {/* Files Grid */}
           <div className={
             view === "grid" 
-              ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 auto-rows-max" 
+              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4 auto-rows-max" 
               : "space-y-4"
           }>
             {sectionFiles.map((file) => (
@@ -697,7 +697,7 @@ export default function DashboardPage() {
               <h3 className="text-sm font-medium text-gray-700 mb-3">Folders</h3>
               <div className={
                 view === "grid" 
-                  ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 auto-rows-max" 
+                  ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4 auto-rows-max" 
                   : "space-y-4"
               }>
                 {sectionFolders.map((folder) => (
@@ -717,7 +717,7 @@ export default function DashboardPage() {
               {sectionFolders.length > 0 && <h3 className="text-sm font-medium text-gray-700 mb-3">Files</h3>}
               <div className={
                 view === "grid" 
-                  ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 auto-rows-max" 
+                  ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4 auto-rows-max" 
                   : "space-y-4"
               }>
                 {sectionFiles.map((file) => (
@@ -960,7 +960,7 @@ export default function DashboardPage() {
           <Button
             size="sm"
             variant="outline"
-            className="text-xs"
+            className="text-xs px-2 py-1 h-7"
             onClick={(e) => {
               e.stopPropagation();
               // Handle AI summary generation
@@ -969,12 +969,25 @@ export default function DashboardPage() {
             <Sparkles className="h-3 w-3 mr-1" />
             AI Summary
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-xs px-2 py-1 h-7"
+            onClick={(e) => {
+              e.stopPropagation();
+              // Handle AI analysis
+            }}
+          >
+            <Brain className="h-3 w-3 mr-1" />
+            Analyze
+          </Button>
         </div>
         
         <div className="flex items-center space-x-1">
           <Button
             size="sm"
             variant="ghost"
+            className="h-7 w-7 p-0"
             onClick={(e) => {
               e.stopPropagation();
               // Handle star toggle
@@ -985,12 +998,24 @@ export default function DashboardPage() {
           <Button
             size="sm"
             variant="ghost"
+            className="h-7 w-7 p-0"
             onClick={(e) => {
               e.stopPropagation();
               // Handle share
             }}
           >
             <Share2 className="h-3 w-3" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              // Handle download
+            }}
+          >
+            <Download className="h-3 w-3" />
           </Button>
         </div>
       </div>
@@ -1112,11 +1137,28 @@ export default function DashboardPage() {
 
             {/* Search Bar */}
             <div className="flex-1 max-w-2xl mx-8">
-              <AISearch
-                onSearch={handleSearch}
-                className="w-full"
-                recentSearches={["documents", "images", "receipts"]}
-              />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search files and folders..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    handleSearch(e.target.value);
+                  }}
+                  className="block w-full pl-10 pr-12 py-2.5 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200"
+                />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                  <div className="flex items-center space-x-1">
+                    <kbd className="inline-flex items-center px-2 py-1 border border-gray-200 rounded text-xs font-sans font-medium text-gray-400">
+                      Ctrl+K
+                    </kbd>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Right Actions */}
@@ -1155,9 +1197,9 @@ export default function DashboardPage() {
 
       {/* Main Content - Fixed Height with Scroll */}
       <div className="flex-1 flex overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex gap-8 w-full min-w-0">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 flex gap-4 lg:gap-6 min-w-0 overflow-hidden">
           {/* Advanced Sidebar - Fixed Width, Scrollable Content */}
-          <div className="w-80 flex-shrink-0 overflow-y-auto scrollbar-hide">
+          <div className="w-72 lg:w-80 flex-shrink-0 overflow-y-auto scrollbar-hide hidden md:block">
             <div className="space-y-4 pb-6">
               
               {/* New Button with Dropdown */}
@@ -1421,11 +1463,11 @@ export default function DashboardPage() {
           <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex-1 flex flex-col overflow-hidden">
               {/* Content Header - Fixed */}
-              <div className="border-b border-gray-200 px-6 py-4 flex-shrink-0">
+              <div className="border-b border-gray-200 px-4 sm:px-6 py-4 flex-shrink-0">
                 {renderBreadcrumb()}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-xl font-semibold text-gray-900">{getSectionTitle()}</h2>
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="min-w-0">
+                    <h2 className="text-xl font-semibold text-gray-900 truncate">{getSectionTitle()}</h2>
                     <p className="text-sm text-gray-500 mt-1">
                       {getCurrentSectionFiles().length + getCurrentSectionFolders().length} item{(getCurrentSectionFiles().length + getCurrentSectionFolders().length) !== 1 ? "s" : ""}
                       {selectedFiles.length > 0 && (
@@ -1436,7 +1478,7 @@ export default function DashboardPage() {
                     </p>
                   </div>
 
-                  <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-3 flex-shrink-0">
                     <div className="flex items-center bg-gray-100 rounded-lg p-1">
                       <button
                         onClick={() => setView("grid")}
@@ -1460,12 +1502,12 @@ export default function DashboardPage() {
                       </button>
                     </div>
 
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="hidden sm:flex">
                       <Filter className="h-4 w-4 mr-2" />
                       Filter
                     </Button>
                     
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="hidden sm:flex">
                       <SortAsc className="h-4 w-4 mr-2" />
                       Sort
                     </Button>
@@ -1474,7 +1516,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Dynamic File Content - Scrollable */}
-              <div className="flex-1 overflow-y-auto scrollbar-hide p-6">
+              <div className="flex-1 overflow-y-auto scrollbar-hide p-4 sm:p-6">
                 {renderSectionContent()}
               </div>
             </div>
