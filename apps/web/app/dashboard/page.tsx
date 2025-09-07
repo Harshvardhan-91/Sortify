@@ -793,12 +793,12 @@ export default function DashboardPage() {
     className?: string;
   }) => (
     <div 
-      className={`border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-all duration-200 cursor-pointer group h-fit ${className}`}
+      className={`border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-all duration-200 cursor-pointer group bg-white ${className}`}
       onClick={onClick}
     >
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center space-x-3 flex-1 min-w-0">
+          <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
             <Folder className="h-5 w-5 text-white" />
           </div>
           <div className="flex-1 min-w-0">
@@ -807,10 +807,11 @@ export default function DashboardPage() {
           </div>
         </div>
         
-        <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
           <Button
             size="sm"
             variant="ghost"
+            className="h-8 w-8 p-0"
             onClick={(e) => {
               e.stopPropagation();
               // Handle folder options
@@ -821,31 +822,33 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+      <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-4">
         <span className="text-xs text-gray-500">
-          {/* Could show file count here */}
+          Click to open
         </span>
         
         <div className="flex items-center space-x-1">
           <Button
             size="sm"
             variant="ghost"
+            className="h-8 w-8 p-0 hover:bg-yellow-50"
             onClick={(e) => {
               e.stopPropagation();
               // Handle star toggle
             }}
           >
-            <Star className="h-3 w-3" />
+            <Star className="h-4 w-4 text-gray-400 hover:text-yellow-500" />
           </Button>
           <Button
             size="sm"
             variant="ghost"
+            className="h-8 w-8 p-0 hover:bg-blue-50"
             onClick={(e) => {
               e.stopPropagation();
               // Handle share
             }}
           >
-            <Share2 className="h-3 w-3" />
+            <Share2 className="h-4 w-4 text-gray-400 hover:text-blue-500" />
           </Button>
         </div>
       </div>
@@ -870,12 +873,12 @@ export default function DashboardPage() {
     className?: string;
   }) => (
     <div 
-      className={`border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-all duration-200 cursor-pointer group h-fit ${className}`}
+      className={`border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-all duration-200 cursor-pointer group bg-white ${className}`}
       onClick={onClick}
     >
       <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center">
+        <div className="flex items-center space-x-3 flex-1 min-w-0">
+          <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
             {getFileIcon(name)}
           </div>
           <div className="flex-1 min-w-0">
@@ -886,10 +889,11 @@ export default function DashboardPage() {
           </div>
         </div>
         
-        <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
           <Button
             size="sm"
             variant="ghost"
+            className="h-8 w-8 p-0"
             onClick={(e) => {
               e.stopPropagation();
               onDownload();
@@ -900,11 +904,11 @@ export default function DashboardPage() {
           <Button
             size="sm"
             variant="ghost"
+            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
             onClick={(e) => {
               e.stopPropagation();
               onDelete();
             }}
-            className="text-red-600 hover:text-red-700"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -955,12 +959,12 @@ export default function DashboardPage() {
       )}
 
       {/* AI Actions */}
-      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+      <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-4">
         <div className="flex space-x-2">
           <Button
             size="sm"
             variant="outline"
-            className="text-xs px-2 py-1 h-7"
+            className="text-xs px-3 py-1.5 h-auto border-blue-200 text-blue-700 hover:bg-blue-50"
             onClick={(e) => {
               e.stopPropagation();
               // Handle AI summary generation
@@ -972,7 +976,7 @@ export default function DashboardPage() {
           <Button
             size="sm"
             variant="outline"
-            className="text-xs px-2 py-1 h-7"
+            className="text-xs px-3 py-1.5 h-auto border-purple-200 text-purple-700 hover:bg-purple-50"
             onClick={(e) => {
               e.stopPropagation();
               // Handle AI analysis
@@ -987,35 +991,24 @@ export default function DashboardPage() {
           <Button
             size="sm"
             variant="ghost"
-            className="h-7 w-7 p-0"
+            className="h-8 w-8 p-0 hover:bg-yellow-50"
             onClick={(e) => {
               e.stopPropagation();
               // Handle star toggle
             }}
           >
-            <Star className="h-3 w-3" />
+            <Star className="h-4 w-4 text-gray-400 hover:text-yellow-500" />
           </Button>
           <Button
             size="sm"
             variant="ghost"
-            className="h-7 w-7 p-0"
+            className="h-8 w-8 p-0 hover:bg-blue-50"
             onClick={(e) => {
               e.stopPropagation();
               // Handle share
             }}
           >
-            <Share2 className="h-3 w-3" />
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 w-7 p-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              // Handle download
-            }}
-          >
-            <Download className="h-3 w-3" />
+            <Share2 className="h-4 w-4 text-gray-400 hover:text-blue-500" />
           </Button>
         </div>
       </div>
@@ -1149,7 +1142,7 @@ export default function DashboardPage() {
                     setSearchQuery(e.target.value);
                     handleSearch(e.target.value);
                   }}
-                  className="block w-full pl-10 pr-12 py-2.5 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200"
+                  className="block w-full pl-10 pr-12 py-2.5 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 text-gray-900 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200"
                 />
                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
                   <div className="flex items-center space-x-1">
@@ -1197,7 +1190,7 @@ export default function DashboardPage() {
 
       {/* Main Content - Fixed Height with Scroll */}
       <div className="flex-1 flex overflow-hidden">
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 flex gap-4 lg:gap-6 min-w-0 overflow-hidden">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 flex gap-4 lg:gap-6 overflow-hidden">
           {/* Advanced Sidebar - Fixed Width, Scrollable Content */}
           <div className="w-72 lg:w-80 flex-shrink-0 overflow-y-auto scrollbar-hide hidden md:block">
             <div className="space-y-4 pb-6">
