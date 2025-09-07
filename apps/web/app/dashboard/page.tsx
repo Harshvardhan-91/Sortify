@@ -105,13 +105,17 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [showNewDropdown, setShowNewDropdown] = useState(false);
-  const [activeSidebarItem, setActiveSidebarItem] = useState("home");
+  const [activeSidebarItem, setActiveSidebarItem] = useState("my-drive");
   const [storageUsed, setStorageUsed] = useState(5.2); // GB
   const [storageTotal] = useState(15); // GB
   const [starredFiles, setStarredFiles] = useState<string[]>([]);
   const [trashedFiles, setTrashedFiles] = useState<File[]>([]);
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  
+  // Folder navigation
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [folderPath, setFolderPath] = useState<{ id: string; name: string }[]>([]);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -298,23 +302,81 @@ export default function DashboardPage() {
 
   // Helper functions for different sections
   const getCurrentSectionFiles = () => {
+    let baseFiles: File[] = [];
+    
     switch (activeSidebarItem) {
       case "starred":
-        return files.filter(f => starredFiles.includes(f.id));
+        baseFiles = files.filter(f => starredFiles.includes(f.id));
+        break;
       case "recent":
-        return [...files].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).slice(0, 20);
+        baseFiles = [...files].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).slice(0, 20);
+        break;
       case "trash":
         return trashedFiles;
       case "shared":
-        return []; // Would be implemented with shared files API
+        baseFiles = []; // Would be implemented with shared files API
+        break;
       case "ai-insights":
-        return files.filter(f => f.processingStatus === 'COMPLETED');
+        baseFiles = files.filter(f => f.processingStatus === 'COMPLETED');
+        break;
       default:
-        return filteredFiles;
+        baseFiles = filteredFiles;
+    }
+
+    // Filter by current folder if navigating within folders
+    if (currentFolderId) {
+      return baseFiles.filter(f => f.folderId === currentFolderId);
+    }
+    
+    // Show root level files (no folder or root folder)
+    return baseFiles.filter(f => !f.folderId || f.folderId === 'root');
+  };
+
+  const getCurrentSectionFolders = () => {
+    if (activeSidebarItem === "trash" || activeSidebarItem === "starred" || activeSidebarItem === "recent") {
+      return []; // These sections don't show folders
+    }
+    
+    // Filter folders by current location
+    if (currentFolderId) {
+      return folders.filter(f => f.parentId === currentFolderId);
+    }
+    
+    // Show root level folders
+    return folders.filter(f => !f.parentId || f.parentId === 'root');
+  };
+
+  const navigateToFolder = (folderId: string, folderName: string) => {
+    setCurrentFolderId(folderId);
+    setFolderPath(prev => [...prev, { id: folderId, name: folderName }]);
+    setActiveSidebarItem("my-drive"); // Switch to My Drive when navigating folders
+  };
+
+  const navigateUp = () => {
+    if (folderPath.length > 0) {
+      const newPath = [...folderPath];
+      newPath.pop();
+      setFolderPath(newPath);
+      
+      if (newPath.length === 0) {
+        setCurrentFolderId(null);
+      } else {
+        setCurrentFolderId(newPath[newPath.length - 1].id);
+      }
     }
   };
 
+  const navigateToRoot = () => {
+    setCurrentFolderId(null);
+    setFolderPath([]);
+    setActiveSidebarItem("my-drive");
+  };
+
   const getSectionTitle = () => {
+    if (currentFolderId && folderPath.length > 0) {
+      return folderPath[folderPath.length - 1].name;
+    }
+    
     switch (activeSidebarItem) {
       case "starred": return "Starred";
       case "recent": return "Recent";
@@ -324,6 +386,37 @@ export default function DashboardPage() {
       case "smart-search": return "Smart Search";
       default: return "My Files";
     }
+  };
+
+  const renderBreadcrumb = () => {
+    if (activeSidebarItem !== "my-drive" && !currentFolderId) return null;
+    
+    return (
+      <div className="flex items-center space-x-2 text-sm text-gray-600 mb-4">
+        <button
+          onClick={navigateToRoot}
+          className="hover:text-blue-600 transition-colors"
+        >
+          <Home className="h-4 w-4" />
+        </button>
+        
+        {folderPath.map((folder, index) => (
+          <React.Fragment key={folder.id}>
+            <ChevronRight className="h-4 w-4 text-gray-400" />
+            <button
+              onClick={() => {
+                const newPath = folderPath.slice(0, index + 1);
+                setFolderPath(newPath);
+                setCurrentFolderId(folder.id);
+              }}
+              className="hover:text-blue-600 transition-colors"
+            >
+              {folder.name}
+            </button>
+          </React.Fragment>
+        ))}
+      </div>
+    );
   };
 
   // File tree handlers
@@ -347,6 +440,7 @@ export default function DashboardPage() {
     const newFolder: Folder = {
       id: `folder-${Date.now()}`,
       name: newFolderName,
+      parentId: currentFolderId || 'root',
       fileCount: 0,
       subfolderCount: 0
     };
@@ -565,7 +659,7 @@ export default function DashboardPage() {
           {/* Files Grid */}
           <div className={
             view === "grid" 
-              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" 
+              ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 auto-rows-max" 
               : "space-y-4"
           }>
             {sectionFiles.map((file) => (
@@ -592,48 +686,77 @@ export default function DashboardPage() {
       );
     }
 
-    // Regular file grid view
-    if (sectionFiles.length > 0) {
+    // Regular file and folder grid view
+    const sectionFolders = getCurrentSectionFolders();
+    if (sectionFiles.length > 0 || sectionFolders.length > 0) {
       return (
-        <div className={
-          view === "grid" 
-            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" 
-            : "space-y-4"
-        }>
-          {sectionFiles.map((file) => (
-            <AIFileCard
-              key={file.id}
-              name={file.name}
-              size={file.size}
-              updatedAt={file.updatedAt}
-              aiTags={file.aiTags}
-              aiSummary={file.aiSummary}
-              processingStatus={file.processingStatus}
-              onClick={() => {
-                handleFileClick(file);
-                setSelectedFiles(prev => 
-                  prev.includes(file.id) 
-                    ? prev.filter(id => id !== file.id)
-                    : [...prev, file.id]
-                );
-              }}
-              onDownload={() => handleFileDownload(file)}
-              onDelete={() => 
-                activeSidebarItem === "trash" 
-                  ? handlePermanentDelete(file)
-                  : handleFileDelete(file)
-              }
-              className={
-                selectedFiles.includes(file.id) 
-                  ? "ring-2 ring-blue-500 bg-blue-50" 
-                  : ""
-              }
-            />
-          ))}
+        <div className="space-y-6">
+          {/* Show folders first */}
+          {sectionFolders.length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 mb-3">Folders</h3>
+              <div className={
+                view === "grid" 
+                  ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 auto-rows-max" 
+                  : "space-y-4"
+              }>
+                {sectionFolders.map((folder) => (
+                  <FolderCard
+                    key={folder.id}
+                    name={folder.name}
+                    onClick={() => navigateToFolder(folder.id, folder.name)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Show files */}
+          {sectionFiles.length > 0 && (
+            <div>
+              {sectionFolders.length > 0 && <h3 className="text-sm font-medium text-gray-700 mb-3">Files</h3>}
+              <div className={
+                view === "grid" 
+                  ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 auto-rows-max" 
+                  : "space-y-4"
+              }>
+                {sectionFiles.map((file) => (
+                  <AIFileCard
+                    key={file.id}
+                    name={file.name}
+                    size={file.size}
+                    updatedAt={file.updatedAt}
+                    aiTags={file.aiTags}
+                    aiSummary={file.aiSummary}
+                    processingStatus={file.processingStatus}
+                    onClick={() => {
+                      handleFileClick(file);
+                      setSelectedFiles(prev => 
+                        prev.includes(file.id) 
+                          ? prev.filter(id => id !== file.id)
+                          : [...prev, file.id]
+                      );
+                    }}
+                    onDownload={() => handleFileDownload(file)}
+                    onDelete={() => 
+                      activeSidebarItem === "trash" 
+                        ? handlePermanentDelete(file)
+                        : handleFileDelete(file)
+                    }
+                    className={
+                      selectedFiles.includes(file.id) 
+                        ? "ring-2 ring-blue-500 bg-blue-50" 
+                        : ""
+                    }
+                  />
+                ))}
+              </div>
+            </div>
+          )}
           
           {/* Show restore button for trash items */}
-          {activeSidebarItem === "trash" && (
-            <div className="col-span-full mt-6 text-center">
+          {activeSidebarItem === "trash" && sectionFiles.length > 0 && (
+            <div className="mt-6 text-center">
               <Button
                 onClick={() => {
                   sectionFiles.forEach(file => handleRestoreFile(file));
@@ -661,6 +784,74 @@ export default function DashboardPage() {
     return renderEmptyState();
   };
 
+  // Folder card component
+  const FolderCard = ({ 
+    name, onClick, className 
+  }: {
+    name: string;
+    onClick: () => void;
+    className?: string;
+  }) => (
+    <div 
+      className={`border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-all duration-200 cursor-pointer group h-fit ${className}`}
+      onClick={onClick}
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center">
+            <Folder className="h-5 w-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-medium text-gray-900 truncate">{name}</h3>
+            <p className="text-xs text-gray-500">Folder</p>
+          </div>
+        </div>
+        
+        <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              // Handle folder options
+            }}
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+        <span className="text-xs text-gray-500">
+          {/* Could show file count here */}
+        </span>
+        
+        <div className="flex items-center space-x-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              // Handle star toggle
+            }}
+          >
+            <Star className="h-3 w-3" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              // Handle share
+            }}
+          >
+            <Share2 className="h-3 w-3" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
   // AI-enhanced file card component
   const AIFileCard = ({ 
     name, size, updatedAt, 
@@ -679,13 +870,13 @@ export default function DashboardPage() {
     className?: string;
   }) => (
     <div 
-      className={`border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-200 cursor-pointer group ${className}`}
+      className={`border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-all duration-200 cursor-pointer group h-fit ${className}`}
       onClick={onClick}
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-            <FileText className="h-5 w-5 text-white" />
+          <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center">
+            {getFileIcon(name)}
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-medium text-gray-900 truncate">{name}</h3>
@@ -814,6 +1005,81 @@ export default function DashboardPage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  const getFileIcon = (fileName: string, mimeType?: string) => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    const type = mimeType || '';
+
+    // Folder
+    if (!extension) {
+      return <Folder className="h-5 w-5 text-yellow-600" />;
+    }
+
+    // Documents
+    if (['pdf'].includes(extension) || type.includes('pdf')) {
+      return (
+        <div className="w-5 h-5 bg-red-500 rounded flex items-center justify-center">
+          <span className="text-white text-xs font-bold">PDF</span>
+        </div>
+      );
+    }
+
+    if (['doc', 'docx'].includes(extension) || type.includes('msword') || type.includes('wordprocessingml')) {
+      return (
+        <div className="w-5 h-5 bg-blue-600 rounded flex items-center justify-center">
+          <span className="text-white text-xs font-bold">W</span>
+        </div>
+      );
+    }
+
+    if (['xls', 'xlsx'].includes(extension) || type.includes('excel') || type.includes('spreadsheetml')) {
+      return (
+        <div className="w-5 h-5 bg-green-600 rounded flex items-center justify-center">
+          <span className="text-white text-xs font-bold">X</span>
+        </div>
+      );
+    }
+
+    if (['ppt', 'pptx'].includes(extension) || type.includes('presentation')) {
+      return (
+        <div className="w-5 h-5 bg-orange-600 rounded flex items-center justify-center">
+          <span className="text-white text-xs font-bold">P</span>
+        </div>
+      );
+    }
+
+    if (['txt', 'rtf'].includes(extension) || type.includes('text/plain')) {
+      return <FileText className="h-5 w-5 text-gray-600" />;
+    }
+
+    // Images
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'ico'].includes(extension) || type.includes('image')) {
+      return <ImageIcon className="h-5 w-5 text-green-600" />;
+    }
+
+    // Videos
+    if (['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv'].includes(extension) || type.includes('video')) {
+      return <Video className="h-5 w-5 text-purple-600" />;
+    }
+
+    // Audio
+    if (['mp3', 'wav', 'flac', 'aac', 'ogg', 'wma'].includes(extension) || type.includes('audio')) {
+      return <Music className="h-5 w-5 text-pink-600" />;
+    }
+
+    // Archives
+    if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2'].includes(extension)) {
+      return <Archive className="h-5 w-5 text-yellow-600" />;
+    }
+
+    // Code files
+    if (['js', 'ts', 'jsx', 'tsx', 'html', 'css', 'py', 'java', 'cpp', 'c', 'php', 'rb', 'go', 'rs'].includes(extension)) {
+      return <FileCode className="h-5 w-5 text-blue-500" />;
+    }
+
+    // Default
+    return <FileText className="h-5 w-5 text-gray-600" />;
+  };
+
   if (loading || !session) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -826,9 +1092,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="h-screen flex flex-col bg-gray-50">
       {/* Modern Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
+      <header className="bg-white border-b border-gray-200 flex-shrink-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo and Brand */}
@@ -887,12 +1153,12 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex gap-8">
-          {/* Advanced Sidebar */}
-          <div className="w-80 flex-shrink-0">
-            <div className="sticky top-24 space-y-4">
+      {/* Main Content - Fixed Height with Scroll */}
+      <div className="flex-1 flex overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex gap-8 w-full min-w-0">
+          {/* Advanced Sidebar - Fixed Width, Scrollable Content */}
+          <div className="w-80 flex-shrink-0 overflow-y-auto scrollbar-hide">
+            <div className="space-y-4 pb-6">
               
               {/* New Button with Dropdown */}
               <div className="relative">
@@ -1151,16 +1417,17 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Dynamic Main Content Area */}
-          <div className="flex-1 min-w-0">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-              {/* Content Header */}
-              <div className="border-b border-gray-200 px-6 py-4">
+          {/* Dynamic Main Content Area - Flex-1, Scrollable */}
+          <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex-1 flex flex-col overflow-hidden">
+              {/* Content Header - Fixed */}
+              <div className="border-b border-gray-200 px-6 py-4 flex-shrink-0">
+                {renderBreadcrumb()}
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-xl font-semibold text-gray-900">{getSectionTitle()}</h2>
                     <p className="text-sm text-gray-500 mt-1">
-                      {getCurrentSectionFiles().length} file{getCurrentSectionFiles().length !== 1 ? "s" : ""}
+                      {getCurrentSectionFiles().length + getCurrentSectionFolders().length} item{(getCurrentSectionFiles().length + getCurrentSectionFolders().length) !== 1 ? "s" : ""}
                       {selectedFiles.length > 0 && (
                         <span className="ml-2 text-blue-600">
                           • {selectedFiles.length} selected
@@ -1206,8 +1473,8 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Dynamic File Content */}
-              <div className="p-6">
+              {/* Dynamic File Content - Scrollable */}
+              <div className="flex-1 overflow-y-auto scrollbar-hide p-6">
                 {renderSectionContent()}
               </div>
             </div>
@@ -1271,6 +1538,70 @@ export default function DashboardPage() {
                 maxSize={100 * 1024 * 1024} // 100MB
                 className="w-full"
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Folder Modal */}
+      {showCreateFolderModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center">
+            <div
+              className="fixed inset-0 transition-opacity bg-black bg-opacity-50"
+              onClick={() => setShowCreateFolderModal(false)}
+            />
+
+            <div className="relative inline-block w-full max-w-md p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-2xl rounded-2xl">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Create New Folder
+                </h3>
+                <button
+                  onClick={() => setShowCreateFolderModal(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <span className="sr-only">Close</span>
+                  ✕
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <label htmlFor="folderName" className="block text-sm font-medium text-gray-700 mb-2">
+                  Folder Name
+                </label>
+                <input
+                  type="text"
+                  id="folderName"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      createFolder();
+                    }
+                  }}
+                  placeholder="Enter folder name"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCreateFolderModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={createFolder}
+                  disabled={!newFolderName.trim()}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <FolderPlus className="h-4 w-4 mr-2" />
+                  Create Folder
+                </Button>
+              </div>
             </div>
           </div>
         </div>
