@@ -195,11 +195,13 @@ export default function SettingsPage() {
                   onClick={() => setTheme(option.value as "light" | "dark" | "system")}
                   className={`flex flex-col items-center p-4 rounded-xl border-2 transition-all ${
                     theme === option.value
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-gray-300"
+                      ? "border-blue-500 bg-blue-50 text-blue-700"
+                      : "border-gray-200 hover:border-gray-300 text-gray-700 hover:text-gray-900"
                   }`}
                 >
-                  <IconComponent className="h-6 w-6 mb-2" />
+                  <IconComponent className={`h-6 w-6 mb-2 ${
+                    theme === option.value ? "text-blue-600" : "text-gray-600"
+                  }`} />
                   <span className="text-sm font-medium">{option.label}</span>
                 </button>
               );
@@ -212,12 +214,12 @@ export default function SettingsPage() {
           <select
             value={language}
             onChange={(e) => setLanguage(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
           >
-            <option value="en">English</option>
-            <option value="es">Español</option>
-            <option value="fr">Français</option>
-            <option value="de">Deutsch</option>
+            <option value="en" className="text-gray-900">English</option>
+            <option value="es" className="text-gray-900">Español</option>
+            <option value="fr" className="text-gray-900">Français</option>
+            <option value="de" className="text-gray-900">Deutsch</option>
           </select>
         </div>
 
