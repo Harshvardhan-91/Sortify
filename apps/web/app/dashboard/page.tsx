@@ -72,8 +72,11 @@ interface File {
 interface Folder {
   id: string;
   name: string;
+  parentId?: string;
   fileCount: number;
   subfolderCount: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface FileNode {
@@ -116,6 +119,95 @@ export default function DashboardPage() {
   // Folder navigation
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [folderPath, setFolderPath] = useState<{ id: string; name: string }[]>([]);
+  
+  // Smart filtering and sorting
+  const [sortBy, setSortBy] = useState<'name' | 'date' | 'size' | 'type' | 'ai-score'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [filterBy, setFilterBy] = useState<{
+    type?: string;
+    hasAI?: boolean;
+    dateRange?: string;
+  }>({});
+
+  const handleSort = (newSortBy: typeof sortBy) => {
+    if (sortBy === newSortBy) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(newSortBy);
+      setSortOrder('desc');
+    }
+  };
+
+  const handleFilter = (newFilter: typeof filterBy) => {
+    setFilterBy(newFilter);
+  };
+
+  const getSortedAndFilteredFiles = (files: File[]) => {
+    let filtered = [...files];
+
+    // Apply filters
+    if (filterBy.type) {
+      filtered = filtered.filter(file => 
+        file.mimeType?.includes(filterBy.type!) ||
+        file.name.toLowerCase().includes(filterBy.type!.toLowerCase())
+      );
+    }
+
+    if (filterBy.hasAI) {
+      filtered = filtered.filter(file => 
+        file.processingStatus === 'COMPLETED' && (file.aiTags?.length || 0) > 0
+      );
+    }
+
+    if (filterBy.dateRange) {
+      const now = new Date();
+      const cutoff = new Date();
+      
+      switch (filterBy.dateRange) {
+        case 'today':
+          cutoff.setDate(now.getDate() - 1);
+          break;
+        case 'week':
+          cutoff.setDate(now.getDate() - 7);
+          break;
+        case 'month':
+          cutoff.setMonth(now.getMonth() - 1);
+          break;
+      }
+      
+      filtered = filtered.filter(file => 
+        new Date(file.updatedAt) >= cutoff
+      );
+    }
+
+    // Apply sorting
+    return filtered.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'name':
+          comparison = a.name.localeCompare(b.name);
+          break;
+        case 'date':
+          comparison = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+          break;
+        case 'size':
+          comparison = a.size - b.size;
+          break;
+        case 'type':
+          comparison = (a.mimeType || '').localeCompare(b.mimeType || '');
+          break;
+        case 'ai-score': {
+          const aScore = (a.aiTags?.length || 0) + (a.aiSummary ? 1 : 0);
+          const bScore = (b.aiTags?.length || 0) + (b.aiSummary ? 1 : 0);
+          comparison = aScore - bScore;
+          break;
+        }
+      }
+      
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+  };
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -312,24 +404,29 @@ export default function DashboardPage() {
         baseFiles = [...files].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).slice(0, 20);
         break;
       case "trash":
-        return trashedFiles;
+        return getSortedAndFilteredFiles(trashedFiles);
       case "shared":
         baseFiles = []; // Would be implemented with shared files API
         break;
       case "ai-insights":
         baseFiles = files.filter(f => f.processingStatus === 'COMPLETED');
         break;
+      case "smart-search":
+        baseFiles = filteredFiles;
+        break;
       default:
         baseFiles = filteredFiles;
     }
 
     // Filter by current folder if navigating within folders
-    if (currentFolderId) {
-      return baseFiles.filter(f => f.folderId === currentFolderId);
+    if (currentFolderId && activeSidebarItem !== "smart-search") {
+      baseFiles = baseFiles.filter(f => f.folderId === currentFolderId);
+    } else if (activeSidebarItem !== "smart-search") {
+      // Show root level files (no folder or root folder)
+      baseFiles = baseFiles.filter(f => !f.folderId || f.folderId === 'root');
     }
     
-    // Show root level files (no folder or root folder)
-    return baseFiles.filter(f => !f.folderId || f.folderId === 'root');
+    return getSortedAndFilteredFiles(baseFiles);
   };
 
   const getCurrentSectionFolders = () => {
@@ -442,7 +539,9 @@ export default function DashboardPage() {
       name: newFolderName,
       parentId: currentFolderId || 'root',
       fileCount: 0,
-      subfolderCount: 0
+      subfolderCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
     
     setFolders(prev => [...prev, newFolder]);
@@ -475,23 +574,60 @@ export default function DashboardPage() {
     setSearchQuery(query);
     console.log("AI-powered search:", query, filters);
 
-    // Here you would implement AI-powered search logic:
-    // 1. Send query to AI search API
-    // 2. Include semantic search, content analysis, tag matching
-    // 3. Filter by file types, date ranges, etc.
-    // 4. Return ranked results based on relevance
-
-    // For now, simple text matching
-    if (query.trim()) {
-      const filtered = files.filter(
-        (file) =>
-          file.name.toLowerCase().includes(query.toLowerCase()) ||
-          (file.mimeType &&
-            file.mimeType.toLowerCase().includes(query.toLowerCase())),
-      );
-      setFilteredFiles(filtered);
-    } else {
+    if (!query.trim()) {
       setFilteredFiles(files);
+      return;
+    }
+
+    // Enhanced AI-powered search logic
+    const searchTerms = query.toLowerCase().split(' ');
+    let filtered = files.filter(file => {
+      const fileName = file.name.toLowerCase();
+      const fileType = file.mimeType?.toLowerCase() || '';
+      const aiTags = file.aiTags?.join(' ').toLowerCase() || '';
+      const aiSummary = file.aiSummary?.toLowerCase() || '';
+      
+      // Check if all search terms match in any field
+      return searchTerms.every(term => 
+        fileName.includes(term) ||
+        fileType.includes(term) ||
+        aiTags.includes(term) ||
+        aiSummary.includes(term)
+      );
+    });
+
+    // Apply additional filters
+    if (filters?.fileTypes && filters.fileTypes.length > 0) {
+      filtered = filtered.filter(file => 
+        filters.fileTypes!.some(type => 
+          file.mimeType?.includes(type) || 
+          file.name.toLowerCase().includes(type.toLowerCase())
+        )
+      );
+    }
+
+    if (filters?.hasAI) {
+      filtered = filtered.filter(file => 
+        file.processingStatus === 'COMPLETED' && 
+        (file.aiTags?.length || 0) > 0
+      );
+    }
+
+    if (filters?.tags && filters.tags.length > 0) {
+      filtered = filtered.filter(file => 
+        file.aiTags?.some(tag => 
+          filters.tags!.some(filterTag => 
+            tag.toLowerCase().includes(filterTag.toLowerCase())
+          )
+        )
+      );
+    }
+
+    setFilteredFiles(filtered);
+    
+    // Switch to smart search view if searching
+    if (query.trim()) {
+      setActiveSidebarItem("smart-search");
     }
   };
 
@@ -511,6 +647,60 @@ export default function DashboardPage() {
         ? prev.filter(id => id !== file.id)
         : [...prev, file.id]
     );
+  };
+
+  const handleShareFile = (file: File) => {
+    // Generate shareable link
+    const shareUrl = `${window.location.origin}/shared/${file.id}`;
+    navigator.clipboard.writeText(shareUrl);
+    // You could show a toast notification here
+    alert('Share link copied to clipboard!');
+  };
+
+  const handleGenerateAISummary = async (file: File) => {
+    // Update file to show AI processing
+    setFiles(prev => prev.map(f => 
+      f.id === file.id 
+        ? { ...f, processingStatus: 'PROCESSING' as const }
+        : f
+    ));
+
+    try {
+      // Simulate AI summary generation
+      const summary = await simulateAISummary(file);
+      
+      setFiles(prev => prev.map(f => 
+        f.id === file.id 
+          ? { 
+              ...f, 
+              aiSummary: summary,
+              processingStatus: 'COMPLETED' as const
+            }
+          : f
+      ));
+    } catch (error) {
+      console.error('AI summary generation failed:', error);
+      setFiles(prev => prev.map(f => 
+        f.id === file.id 
+          ? { ...f, processingStatus: 'FAILED' as const }
+          : f
+      ));
+    }
+  };
+
+  const simulateAISummary = async (file: { name: string; mimeType?: string }): Promise<string> => {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    
+    if (['pdf', 'doc', 'docx', 'txt'].includes(extension || '')) {
+      return `This document contains important information about ${file.name.split('.')[0]}. Key topics include data analysis, recommendations, and strategic insights.`;
+    } else if (['jpg', 'jpeg', 'png', 'gif'].includes(extension || '')) {
+      return `This image shows visual content related to ${file.name.split('.')[0]}. Contains graphical elements and may include text or diagrams.`;
+    } else {
+      return `This ${extension?.toUpperCase() || 'file'} contains structured data and information that can be processed for insights.`;
+    }
   };
 
   const handleFileDelete = (file: File) => {
@@ -967,11 +1157,12 @@ export default function DashboardPage() {
             className="text-xs px-3 py-1.5 h-auto border-blue-200 text-blue-700 hover:bg-blue-50"
             onClick={(e) => {
               e.stopPropagation();
-              // Handle AI summary generation
+              handleGenerateAISummary({ id: name + '_' + Date.now(), name, size, updatedAt, aiTags, aiSummary, processingStatus } as File);
             }}
+            disabled={processingStatus === 'PROCESSING'}
           >
             <Sparkles className="h-3 w-3 mr-1" />
-            AI Summary
+            {processingStatus === 'PROCESSING' ? 'Processing...' : 'AI Summary'}
           </Button>
           <Button
             size="sm"
@@ -994,7 +1185,7 @@ export default function DashboardPage() {
             className="h-8 w-8 p-0 hover:bg-yellow-50"
             onClick={(e) => {
               e.stopPropagation();
-              // Handle star toggle
+              handleStarFile({ id: name + '_' + Date.now(), name, size, updatedAt, aiTags, aiSummary, processingStatus } as File);
             }}
           >
             <Star className="h-4 w-4 text-gray-400 hover:text-yellow-500" />
@@ -1005,7 +1196,7 @@ export default function DashboardPage() {
             className="h-8 w-8 p-0 hover:bg-blue-50"
             onClick={(e) => {
               e.stopPropagation();
-              // Handle share
+              handleShareFile({ id: name + '_' + Date.now(), name, size, updatedAt, aiTags, aiSummary, processingStatus } as File);
             }}
           >
             <Share2 className="h-4 w-4 text-gray-400 hover:text-blue-500" />
@@ -1550,13 +1741,14 @@ export default function DashboardPage() {
                   console.log('Files uploaded:', uploadedFiles);
                   // Convert uploaded files to our File interface
                   const newFiles: File[] = uploadedFiles.map((upload) => ({
-                    id: upload.fileId || upload.id,
+                    id: upload.fileId || upload.id || `file-${Date.now()}-${Math.random()}`,
                     name: upload.file.name,
                     size: upload.file.size,
                     mimeType: upload.file.type,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
-                    processingStatus: 'PENDING'
+                    processingStatus: 'PENDING',
+                    folderId: currentFolderId || undefined, // Upload to current folder
                   }));
                   
                   // Add files to state
@@ -1568,10 +1760,24 @@ export default function DashboardPage() {
                   });
                   
                   setShowUpload(false);
+                  
+                  // Show success notification
+                  alert(`Successfully uploaded ${newFiles.length} file${newFiles.length > 1 ? 's' : ''} and started AI processing!`);
                 }}
                 maxFiles={10}
                 maxSize={100 * 1024 * 1024} // 100MB
                 className="w-full"
+                acceptedTypes={[
+                  'image/*',
+                  'application/pdf',
+                  'application/msword',
+                  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                  'application/vnd.ms-excel',
+                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                  'text/*',
+                  'video/*',
+                  'audio/*'
+                ]}
               />
             </div>
           </div>
