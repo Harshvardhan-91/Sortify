@@ -43,10 +43,13 @@ import {
   Home,
   ChevronRight,
   ChevronDown,
+  User,
 } from "lucide-react";
 import { S3FileUpload } from "@repo/ui/s3-file-upload";
 import { SearchBar } from "@repo/ui/search-bar";
 import { AISearch } from "@repo/ui/ai-search";
+import { PDFPreview } from "@repo/ui/pdf-preview";
+import { useToast } from "@repo/ui/toast";
 import { FileTree } from "@repo/ui/file-tree";
 import { Button } from "@repo/ui/button";
 import Image from "next/image";
@@ -97,6 +100,7 @@ interface FileNode {
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { addToast } = useToast();
   const [files, setFiles] = useState<File[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
@@ -115,6 +119,11 @@ export default function DashboardPage() {
   const [trashedFiles, setTrashedFiles] = useState<File[]>([]);
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  
+  // PDF Preview
+  const [showPDFPreview, setShowPDFPreview] = useState(false);
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
   
   // Folder navigation
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
@@ -257,92 +266,121 @@ export default function DashboardPage() {
 
     const loadData = async () => {
       try {
-        // In a real app, you would fetch from your API
-        console.log("Loading files and folders...");
+        setLoading(true);
         
-        // Demo data with AI processing results
-        const demoFiles: File[] = [
-          {
-            id: 'demo-1',
-            name: 'Marketing_Strategy_2024.pdf',
-            size: 2450000,
-            mimeType: 'application/pdf',
-            createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-            updatedAt: new Date(Date.now() - 86400000).toISOString(),
-            processingStatus: 'COMPLETED',
-            aiTags: ['business', 'marketing', 'strategy', 'planning', '2024', 'commercial'],
-            aiSummary: 'Comprehensive marketing strategy document outlining plans for 2024, including target demographics, budget allocation, and campaign strategies across digital and traditional channels.',
-            aiKeywords: ['marketing', 'strategy', 'digital', 'campaigns', 'budget', 'ROI']
-          },
-          {
-            id: 'demo-2',
-            name: 'Product_Screenshot_Dashboard.png',
-            size: 1250000,
-            mimeType: 'image/png',
-            createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-            updatedAt: new Date(Date.now() - 172800000).toISOString(),
-            processingStatus: 'COMPLETED',
-            aiTags: ['screenshot', 'dashboard', 'ui', 'interface', 'analytics', 'charts'],
-            aiSummary: 'Dashboard interface screenshot showing analytics data with charts, graphs, and key performance indicators for business metrics monitoring.',
-            aiKeywords: ['dashboard', 'analytics', 'ui', 'charts', 'metrics', 'interface']
-          },
-          {
-            id: 'demo-3',
-            name: 'Meeting_Notes_Nov_2024.docx',
-            size: 150000,
-            mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            createdAt: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
-            updatedAt: new Date(Date.now() - 259200000).toISOString(),
-            processingStatus: 'PROCESSING',
-          },
-          {
-            id: 'demo-4',
-            name: 'Financial_Report_Q3.xlsx',
-            size: 850000,
-            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            createdAt: new Date(Date.now() - 345600000).toISOString(), // 4 days ago
-            updatedAt: new Date(Date.now() - 345600000).toISOString(),
-            processingStatus: 'PENDING',
-          }
-        ];
+        // Fetch files from API
+        const filesResponse = await fetch('/api/files');
+        const foldersResponse = await fetch('/api/folders');
         
-        const demoFolders: Folder[] = [
-          {
-            id: 'folder-1',
-            name: 'Marketing Materials',
-            fileCount: 12,
-            subfolderCount: 3
-          },
-          {
-            id: 'folder-2',
-            name: 'Project Documentation',
-            fileCount: 8,
-            subfolderCount: 2
-          }
-        ];
+        if (filesResponse.ok && foldersResponse.ok) {
+          const filesData = await filesResponse.json();
+          const foldersData = await foldersResponse.json();
+          
+          setFiles(filesData);
+          setFolders(foldersData);
+          
+          // Auto-process files that haven't been processed yet
+          filesData.forEach((file: File) => {
+            if (!file.processingStatus || file.processingStatus === 'PENDING') {
+              processFileWithAI(file.id, { name: file.name, mimeType: file.mimeType });
+            }
+          });
+        } else {
+          // If API fails, create sample data for demonstration
+          const sampleFiles: File[] = [
+            {
+              id: 'file-1',
+              name: 'Harshvardhan_resume.pdf',
+              size: 148122,
+              mimeType: 'application/pdf',
+              createdAt: new Date('2025-09-08').toISOString(),
+              updatedAt: new Date('2025-09-08').toISOString(),
+              processingStatus: 'COMPLETED',
+              aiTags: ['document', 'pdf', 'text'],
+              aiSummary: 'PDF document "Harshvardhan_resume.pdf" contains structured text content with multiple pages and formatting.',
+              aiKeywords: ['resume', 'cv', 'professional', 'experience'],
+            },
+            {
+              id: 'file-2',
+              name: 'Project_Presentation.pptx',
+              size: 2456789,
+              mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+              createdAt: new Date('2025-09-07').toISOString(),
+              updatedAt: new Date('2025-09-07').toISOString(),
+              processingStatus: 'COMPLETED',
+              aiTags: ['presentation', 'slides', 'project'],
+              aiSummary: 'PowerPoint presentation covering project milestones, achievements, and future roadmap.',
+              aiKeywords: ['presentation', 'project', 'slides', 'business'],
+            },
+            {
+              id: 'file-3',
+              name: 'Financial_Report_Q3.xlsx',
+              size: 567890,
+              mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              createdAt: new Date('2025-09-06').toISOString(),
+              updatedAt: new Date('2025-09-06').toISOString(),
+              processingStatus: 'COMPLETED',
+              aiTags: ['spreadsheet', 'financial', 'data'],
+              aiSummary: 'Financial report containing Q3 revenue, expenses, and profit analysis with charts and tables.',
+              aiKeywords: ['financial', 'report', 'quarterly', 'revenue'],
+            }
+          ];
 
-        setFiles(demoFiles);
-        setFolders(demoFolders);
-        
-        // Simulate processing completion for the processing file
-        setTimeout(() => {
-          setFiles(prev => prev.map(f => 
-            f.id === 'demo-3' 
-              ? { 
-                  ...f, 
-                  processingStatus: 'COMPLETED' as const,
-                  aiTags: ['meeting', 'notes', 'discussion', 'action-items', 'collaboration'],
-                  aiSummary: 'Meeting notes from November 2024 discussing project updates, action items, and team collaboration strategies.',
-                  aiKeywords: ['meeting', 'notes', 'action-items', 'collaboration', 'updates']
-                }
-              : f
-          ));
-        }, 3000);
+          const sampleFolders: Folder[] = [
+            {
+              id: 'folder-1',
+              name: 'Documents',
+              parentId: 'root',
+              fileCount: 12,
+              subfolderCount: 2,
+              createdAt: new Date('2025-09-01').toISOString(),
+              updatedAt: new Date('2025-09-08').toISOString(),
+            },
+            {
+              id: 'folder-2', 
+              name: 'Projects',
+              parentId: 'root',
+              fileCount: 8,
+              subfolderCount: 3,
+              createdAt: new Date('2025-08-15').toISOString(),
+              updatedAt: new Date('2025-09-07').toISOString(),
+            }
+          ];
+          
+          setFiles(sampleFiles);
+          setFolders(sampleFolders);
+          
+          addToast({
+            type: 'info',
+            title: 'Demo Mode',
+            description: 'Showing sample files for demonstration. Upload your own files to get started!',
+            duration: 4000,
+          });
+        }
       } catch (error) {
         console.error("Error loading data:", error);
-        setFiles([]);
+        // Create sample data for offline demo
+        setFiles([
+          {
+            id: 'file-1',
+            name: 'Harshvardhan_resume.pdf',
+            size: 148122,
+            mimeType: 'application/pdf',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            processingStatus: 'COMPLETED',
+            aiTags: ['document', 'pdf', 'text'],
+            aiSummary: 'PDF document "Harshvardhan_resume.pdf" contains structured text content with multiple pages and formatting.',
+          }
+        ]);
         setFolders([]);
-        setFileTree([]);
+        
+        addToast({
+          type: 'warning',
+          title: 'Offline Mode',
+          description: 'Running in offline mode with sample data.',
+          duration: 3000,
+        });
       } finally {
         setLoading(false);
       }
@@ -632,29 +670,58 @@ export default function DashboardPage() {
   };
 
   const handleFileClick = (file: File) => {
-    console.log("File clicked:", file);
-    // Here you would open file preview/details
+    // For PDF files, open preview
+    if (file.mimeType?.includes('pdf')) {
+      setPreviewFile(file);
+      setShowPDFPreview(true);
+    } else {
+      // For other files, you could open different previews or download
+      addToast({
+        type: 'info',
+        title: 'File Preview',
+        description: `Preview for ${file.name} will be available soon.`,
+        duration: 3000,
+      });
+    }
   };
 
   const handleFileDownload = (file: File) => {
-    console.log("Downloading file:", file);
-    // Here you would trigger file download
+    // Simulate file download
+    addToast({
+      type: 'success',
+      title: 'Download Started',
+      description: `Downloading ${file.name}...`,
+      duration: 3000,
+    });
   };
 
   const handleStarFile = (file: File) => {
+    const isStarred = starredFiles.includes(file.id);
     setStarredFiles(prev => 
-      prev.includes(file.id) 
+      isStarred
         ? prev.filter(id => id !== file.id)
         : [...prev, file.id]
     );
+    
+    addToast({
+      type: 'success',
+      title: isStarred ? 'Removed from Starred' : 'Added to Starred',
+      description: `${file.name} ${isStarred ? 'removed from' : 'added to'} starred files.`,
+      duration: 2000,
+    });
   };
 
   const handleShareFile = (file: File) => {
     // Generate shareable link
     const shareUrl = `${window.location.origin}/shared/${file.id}`;
     navigator.clipboard.writeText(shareUrl);
-    // You could show a toast notification here
-    alert('Share link copied to clipboard!');
+    
+    addToast({
+      type: 'success',
+      title: 'Link Copied',
+      description: 'Share link copied to clipboard!',
+      duration: 3000,
+    });
   };
 
   const handleGenerateAISummary = async (file: File) => {
@@ -664,6 +731,13 @@ export default function DashboardPage() {
         ? { ...f, processingStatus: 'PROCESSING' as const }
         : f
     ));
+
+    addToast({
+      type: 'info',
+      title: 'AI Processing',
+      description: `Generating AI summary for ${file.name}...`,
+      duration: 2000,
+    });
 
     try {
       // Simulate AI summary generation
@@ -678,6 +752,13 @@ export default function DashboardPage() {
             }
           : f
       ));
+      
+      addToast({
+        type: 'success',
+        title: 'AI Summary Generated',
+        description: `AI summary for ${file.name} has been generated successfully.`,
+        duration: 3000,
+      });
     } catch (error) {
       console.error('AI summary generation failed:', error);
       setFiles(prev => prev.map(f => 
@@ -685,6 +766,67 @@ export default function DashboardPage() {
           ? { ...f, processingStatus: 'FAILED' as const }
           : f
       ));
+      
+      addToast({
+        type: 'error',
+        title: 'AI Processing Failed',
+        description: `Failed to generate AI summary for ${file.name}.`,
+        duration: 4000,
+      });
+    }
+  };
+
+  const handleAnalyzeFile = async (file: File) => {
+    // Update file to show AI processing
+    setFiles(prev => prev.map(f => 
+      f.id === file.id 
+        ? { ...f, processingStatus: 'PROCESSING' as const }
+        : f
+    ));
+
+    addToast({
+      type: 'info',
+      title: 'AI Analysis',
+      description: `Analyzing ${file.name} with AI...`,
+      duration: 2000,
+    });
+
+    try {
+      // Simulate AI analysis
+      const aiResult = await simulateAIProcessing(file);
+      
+      setFiles(prev => prev.map(f => 
+        f.id === file.id 
+          ? { 
+              ...f, 
+              processingStatus: 'COMPLETED' as const,
+              aiTags: aiResult.aiTags,
+              aiSummary: aiResult.aiSummary,
+              aiKeywords: aiResult.aiKeywords,
+            }
+          : f
+      ));
+      
+      addToast({
+        type: 'success',
+        title: 'AI Analysis Complete',
+        description: `${file.name} has been analyzed with AI successfully.`,
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('AI analysis failed:', error);
+      setFiles(prev => prev.map(f => 
+        f.id === file.id 
+          ? { ...f, processingStatus: 'FAILED' as const }
+          : f
+      ));
+      
+      addToast({
+        type: 'error',
+        title: 'AI Analysis Failed',
+        description: `Failed to analyze ${file.name}.`,
+        duration: 4000,
+      });
     }
   };
 
@@ -855,6 +997,7 @@ export default function DashboardPage() {
             {sectionFiles.map((file) => (
               <AIFileCard
                 key={file.id}
+                id={file.id}
                 name={file.name}
                 size={file.size}
                 updatedAt={file.updatedAt}
@@ -913,6 +1056,7 @@ export default function DashboardPage() {
                 {sectionFiles.map((file) => (
                   <AIFileCard
                     key={file.id}
+                    id={file.id}
                     name={file.name}
                     size={file.size}
                     updatedAt={file.updatedAt}
@@ -1047,10 +1191,11 @@ export default function DashboardPage() {
 
   // AI-enhanced file card component
   const AIFileCard = ({ 
-    name, size, updatedAt, 
+    id, name, size, updatedAt, 
     aiTags, aiSummary, processingStatus,
     onClick, onDownload, onDelete, className 
   }: {
+    id: string;
     name: string;
     size: number;
     updatedAt: string;
@@ -1061,150 +1206,164 @@ export default function DashboardPage() {
     onDownload: () => void;
     onDelete: () => void;
     className?: string;
-  }) => (
-    <div 
-      className={`border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-all duration-200 cursor-pointer group bg-white ${className}`}
-      onClick={onClick}
-    >
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center space-x-3 flex-1 min-w-0">
-          <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
-            {getFileIcon(name)}
+  }) => {
+    const isStarred = starredFiles.includes(id);
+    
+    return (
+      <div 
+        className={`border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-all duration-200 cursor-pointer group bg-white ${className}`}
+        onClick={onClick}
+        onDoubleClick={() => {
+          // Handle double click for preview
+          const file = files.find(f => f.id === id) || { id, name, size, updatedAt, aiTags, aiSummary, processingStatus, mimeType: name.endsWith('.pdf') ? 'application/pdf' : 'unknown' } as File;
+          handleFileClick(file);
+        }}
+      >
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center space-x-3 flex-1 min-w-0">
+            <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+              {getFileIcon(name)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-medium text-gray-900 truncate">{name}</h3>
+              <p className="text-xs text-gray-500">
+                {formatFileSize(size)} • {new Date(updatedAt).toLocaleDateString()}
+              </p>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-medium text-gray-900 truncate">{name}</h3>
-            <p className="text-xs text-gray-500">
-              {formatFileSize(size)} • {new Date(updatedAt).toLocaleDateString()}
+          
+          <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDownload();
+              }}
+            >
+              <Download className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* AI Processing Status */}
+        {processingStatus && (
+          <div className="mb-3">
+            <div className="flex items-center space-x-2">
+              <Brain className="h-4 w-4 text-purple-500" />
+              <span className="text-xs text-purple-700 font-medium">
+                {processingStatus === "PROCESSING" ? "AI Processing..." : "AI Analysis Complete"}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* AI Tags */}
+        {aiTags && aiTags.length > 0 && (
+          <div className="mb-3">
+            <div className="flex flex-wrap gap-1">
+              {aiTags.slice(0, 3).map((tag, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                >
+                  <Zap className="h-3 w-3 mr-1" />
+                  {tag}
+                </span>
+              ))}
+              {aiTags.length > 3 && (
+                <span className="text-xs text-gray-500">
+                  +{aiTags.length - 3} more
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* AI Summary */}
+        {aiSummary && (
+          <div className="mb-3">
+            <p className="text-sm text-gray-600 line-clamp-2">
+              {aiSummary}
             </p>
           </div>
-        </div>
-        
-        <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-8 w-8 p-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDownload();
-            }}
-          >
-            <Download className="h-4 w-4" />
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+        )}
 
-      {/* AI Processing Status */}
-      {processingStatus && (
-        <div className="mb-3">
-          <div className="flex items-center space-x-2">
-            <Brain className="h-4 w-4 text-purple-500" />
-            <span className="text-xs text-purple-700 font-medium">
-              {processingStatus === "processing" ? "AI Processing..." : "AI Analysis Complete"}
-            </span>
+        {/* AI Actions */}
+        <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-4">
+          <div className="flex space-x-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs px-3 py-1.5 h-auto border-blue-200 text-blue-700 hover:bg-blue-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                const file = files.find(f => f.id === id) || { id, name, size, updatedAt, aiTags, aiSummary, processingStatus } as File;
+                handleGenerateAISummary(file);
+              }}
+              disabled={processingStatus === 'PROCESSING'}
+            >
+              <Sparkles className="h-3 w-3 mr-1" />
+              {processingStatus === 'PROCESSING' ? 'Processing...' : 'AI Summary'}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs px-3 py-1.5 h-auto border-purple-200 text-purple-700 hover:bg-purple-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                const file = files.find(f => f.id === id) || { id, name, size, updatedAt, aiTags, aiSummary, processingStatus } as File;
+                handleAnalyzeFile(file);
+              }}
+              disabled={processingStatus === 'PROCESSING'}
+            >
+              <Brain className="h-3 w-3 mr-1" />
+              {processingStatus === 'PROCESSING' ? 'Analyzing...' : 'Analyze'}
+            </Button>
+          </div>
+          
+          <div className="flex items-center space-x-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 hover:bg-yellow-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                const file = files.find(f => f.id === id) || { id, name, size, updatedAt, aiTags, aiSummary, processingStatus } as File;
+                handleStarFile(file);
+              }}
+            >
+              <Star className={`h-4 w-4 ${isStarred ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400 hover:text-yellow-500'}`} />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 hover:bg-blue-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                const file = files.find(f => f.id === id) || { id, name, size, updatedAt, aiTags, aiSummary, processingStatus } as File;
+                handleShareFile(file);
+              }}
+            >
+              <Share2 className="h-4 w-4 text-gray-400 hover:text-blue-500" />
+            </Button>
           </div>
         </div>
-      )}
-
-      {/* AI Tags */}
-      {aiTags && aiTags.length > 0 && (
-        <div className="mb-3">
-          <div className="flex flex-wrap gap-1">
-            {aiTags.slice(0, 3).map((tag, index) => (
-              <span
-                key={index}
-                className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-              >
-                <Zap className="h-3 w-3 mr-1" />
-                {tag}
-              </span>
-            ))}
-            {aiTags.length > 3 && (
-              <span className="text-xs text-gray-500">
-                +{aiTags.length - 3} more
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* AI Summary */}
-      {aiSummary && (
-        <div className="mb-3">
-          <p className="text-sm text-gray-600 line-clamp-2">
-            {aiSummary}
-          </p>
-        </div>
-      )}
-
-      {/* AI Actions */}
-      <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-4">
-        <div className="flex space-x-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="text-xs px-3 py-1.5 h-auto border-blue-200 text-blue-700 hover:bg-blue-50"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleGenerateAISummary({ id: name + '_' + Date.now(), name, size, updatedAt, aiTags, aiSummary, processingStatus } as File);
-            }}
-            disabled={processingStatus === 'PROCESSING'}
-          >
-            <Sparkles className="h-3 w-3 mr-1" />
-            {processingStatus === 'PROCESSING' ? 'Processing...' : 'AI Summary'}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="text-xs px-3 py-1.5 h-auto border-purple-200 text-purple-700 hover:bg-purple-50"
-            onClick={(e) => {
-              e.stopPropagation();
-              // Handle AI analysis
-            }}
-          >
-            <Brain className="h-3 w-3 mr-1" />
-            Analyze
-          </Button>
-        </div>
-        
-        <div className="flex items-center space-x-1">
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-8 w-8 p-0 hover:bg-yellow-50"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleStarFile({ id: name + '_' + Date.now(), name, size, updatedAt, aiTags, aiSummary, processingStatus } as File);
-            }}
-          >
-            <Star className="h-4 w-4 text-gray-400 hover:text-yellow-500" />
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-8 w-8 p-0 hover:bg-blue-50"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleShareFile({ id: name + '_' + Date.now(), name, size, updatedAt, aiTags, aiSummary, processingStatus } as File);
-            }}
-          >
-            <Share2 className="h-4 w-4 text-gray-400 hover:text-blue-500" />
-          </Button>
-        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -1355,25 +1514,68 @@ export default function DashboardPage() {
                 Upload
               </Button>
               
-              {session?.user?.image && (
-                <Image
-                  src={session.user.image}
-                  alt="Profile"
-                  width={32}
-                  height={32}
-                  className="rounded-full"
-                />
-              )}
-              
-              <Button
-                onClick={() => signOut()}
-                variant="ghost"
-                size="sm"
-                className="text-gray-600 hover:text-gray-900"
-                title="Sign Out"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
+              {/* User Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
+                >
+                  {session?.user?.image ? (
+                    <Image
+                      src={session.user.image}
+                      alt="Profile"
+                      width={32}
+                      height={32}
+                      className="rounded-full"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
+                      <span className="text-white font-medium text-sm">
+                        {session?.user?.name?.[0] || session?.user?.email?.[0] || 'U'}
+                      </span>
+                    </div>
+                  )}
+                </button>
+                
+                {userDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                    <div className="px-4 py-2 border-b border-gray-100">
+                      <div className="text-sm font-medium text-gray-900">
+                        {session?.user?.name || 'User'}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {session?.user?.email}
+                      </div>
+                    </div>
+                    
+                    <button 
+                      onClick={() => { router.push("/profile"); setUserDropdownOpen(false); }}
+                      className="flex items-center space-x-2 w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors"
+                    >
+                      <User className="h-4 w-4 text-gray-500" />
+                      <span className="text-gray-900 text-sm">Profile</span>
+                    </button>
+                    
+                    <button 
+                      onClick={() => { router.push("/settings"); setUserDropdownOpen(false); }}
+                      className="flex items-center space-x-2 w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors"
+                    >
+                      <Settings className="h-4 w-4 text-gray-500" />
+                      <span className="text-gray-900 text-sm">Settings</span>
+                    </button>
+                    
+                    <hr className="my-2" />
+                    
+                    <button 
+                      onClick={() => { signOut(); setUserDropdownOpen(false); }}
+                      className="flex items-center space-x-2 w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors text-red-600"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span className="text-sm">Sign Out</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -1686,14 +1888,35 @@ export default function DashboardPage() {
                       </button>
                     </div>
 
-                    <Button variant="outline" size="sm" className="hidden sm:flex">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="hidden sm:flex items-center border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                      onClick={() => {
+                        const newFilter = { ...filterBy };
+                        if (filterBy.hasAI) {
+                          delete newFilter.hasAI;
+                        } else {
+                          newFilter.hasAI = true;
+                        }
+                        handleFilter(newFilter);
+                      }}
+                    >
                       <Filter className="h-4 w-4 mr-2" />
-                      Filter
+                      <span className="text-gray-700">{filterBy.hasAI ? "AI Files" : "Filter"}</span>
                     </Button>
                     
-                    <Button variant="outline" size="sm" className="hidden sm:flex">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="hidden sm:flex items-center border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                      onClick={() => handleSort(sortBy === 'date' ? 'name' : 'date')}
+                    >
                       <SortAsc className="h-4 w-4 mr-2" />
-                      Sort
+                      <span className="text-gray-700">
+                        {sortBy.charAt(0).toUpperCase() + sortBy.slice(1)}
+                        {sortOrder === 'desc' ? ' ↓' : ' ↑'}
+                      </span>
                     </Button>
                   </div>
                 </div>
@@ -1713,7 +1936,7 @@ export default function DashboardPage() {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center">
             <div
-              className="fixed inset-0 transition-opacity bg-black bg-opacity-50"
+              className="fixed inset-0 transition-opacity bg-black/20 backdrop-blur-sm"
               onClick={() => setShowUpload(false)}
             />
 
@@ -1762,7 +1985,12 @@ export default function DashboardPage() {
                   setShowUpload(false);
                   
                   // Show success notification
-                  alert(`Successfully uploaded ${newFiles.length} file${newFiles.length > 1 ? 's' : ''} and started AI processing!`);
+                  addToast({
+                    type: 'success',
+                    title: 'Files Uploaded Successfully',
+                    description: `Successfully uploaded ${newFiles.length} file${newFiles.length > 1 ? 's' : ''} and started AI processing!`,
+                    duration: 4000,
+                  });
                 }}
                 maxFiles={10}
                 maxSize={100 * 1024 * 1024} // 100MB
@@ -1789,7 +2017,7 @@ export default function DashboardPage() {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center">
             <div
-              className="fixed inset-0 transition-opacity bg-black bg-opacity-50"
+              className="fixed inset-0 transition-opacity bg-black/20 backdrop-blur-sm"
               onClick={() => setShowCreateFolderModal(false)}
             />
 
@@ -1831,6 +2059,7 @@ export default function DashboardPage() {
                 <Button
                   variant="outline"
                   onClick={() => setShowCreateFolderModal(false)}
+                  className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                 >
                   Cancel
                 </Button>
@@ -1846,6 +2075,21 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* PDF Preview Modal */}
+      {showPDFPreview && previewFile && (
+        <PDFPreview
+          fileUrl={`/api/files/${previewFile.id}/preview`}
+          fileName={previewFile.name}
+          isOpen={showPDFPreview}
+          onClose={() => {
+            setShowPDFPreview(false);
+            setPreviewFile(null);
+          }}
+          onDownload={() => handleFileDownload(previewFile)}
+          onShare={() => handleShareFile(previewFile)}
+        />
       )}
     </div>
   );
