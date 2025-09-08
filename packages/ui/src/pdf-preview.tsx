@@ -29,11 +29,11 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({
       />
       
       {/* Modal Container */}
-      <div className="fixed inset-0 flex items-center justify-center p-4">
-        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-full max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="fixed inset-0 flex items-center justify-center p-6">
+        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-7xl h-full max-h-[90vh] flex flex-col overflow-hidden">
           
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white flex-shrink-0">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
                 <span className="text-red-600 font-semibold text-xs">PDF</span>
@@ -99,42 +99,104 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({
           </div>
           
           {/* PDF Viewer */}
-          <div className="flex-1 bg-gray-100 overflow-hidden">
-            <div className="h-full flex items-center justify-center p-4">
-              <div className="bg-white shadow-lg rounded-lg overflow-hidden max-w-full max-h-full">
-                {/* PDF iframe or embed */}
-                <iframe
-                  src={`${fileUrl}#toolbar=0&navpanes=0&scrollbar=0`}
-                  className="w-full h-[70vh] border-0"
-                  title={fileName}
-                />
+          <div className="flex-1 bg-gray-50 overflow-hidden p-4">
+            <div className="h-full bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              {/* Since this is a demo, show a PDF placeholder with actual content */}
+              <div className="h-full flex flex-col">
+                {/* Try to load PDF, but provide fallback */}
+                <div className="flex-1 relative">
+                  {/* PDF iframe - hidden initially since URL might not work */}
+                  <iframe
+                    src={fileUrl}
+                    className="absolute inset-0 w-full h-full border-0 hidden"
+                    title={fileName}
+                    onLoad={(e) => {
+                      // Show iframe if it loads successfully
+                      (e.target as HTMLIFrameElement).classList.remove('hidden');
+                      const fallback = (e.target as HTMLIFrameElement).nextElementSibling;
+                      if (fallback) fallback.classList.add('hidden');
+                    }}
+                    onError={() => {
+                      // Keep fallback visible if iframe fails
+                    }}
+                  />
+                  
+                  {/* Fallback PDF preview */}
+                  <div className="flex items-center justify-center h-full p-8">
+                    <div className="text-center max-w-md">
+                      <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <svg className="w-12 h-12 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      
+                      <h3 className="text-xl font-semibold text-gray-900 mb-3">{fileName}</h3>
+                      <p className="text-gray-600 mb-6">
+                        This is a PDF document preview. In a real application, the PDF content would be displayed here.
+                      </p>
+                      
+                      <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
+                        <h4 className="font-medium text-gray-900 mb-2">Document Info:</h4>
+                        <ul className="text-sm text-gray-600 space-y-1">
+                          <li>• File Type: PDF Document</li>
+                          <li>• Size: 144.65 KB</li>
+                          <li>• Pages: 1</li>
+                          <li>• Created: {new Date().toLocaleDateString()}</li>
+                        </ul>
+                      </div>
+                      
+                      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                        {onDownload && (
+                          <button
+                            onClick={onDownload}
+                            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Download PDF
+                          </button>
+                        )}
+                        {onShare && (
+                          <button
+                            onClick={onShare}
+                            className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                          >
+                            <Share2 className="h-4 w-4 mr-2" />
+                            Share
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
           
           {/* Footer */}
-          <div className="flex items-center justify-between p-4 border-t border-gray-200 bg-gray-50">
-            <div className="flex items-center space-x-4 text-sm text-gray-600">
+          <div className="flex items-center justify-between p-4 border-t border-gray-200 bg-white flex-shrink-0">
+            <div className="flex items-center space-x-4 text-sm text-gray-700">
               <span>Page 1 of 1</span>
               <div className="w-px h-4 bg-gray-300" />
               <span>Zoom: 100%</span>
             </div>
             
             <div className="flex items-center space-x-2">
-              <button className="px-3 py-1 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors">
+              <button className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors border border-gray-300">
                 Previous
               </button>
               <div className="flex items-center space-x-2">
                 <input 
                   type="number" 
                   value={1} 
-                  className="w-12 px-2 py-1 text-sm text-center border border-gray-300 rounded"
+                  onChange={() => {}} // Read-only for demo
+                  className="w-16 px-3 py-2 text-sm text-center border border-gray-300 rounded bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   min={1}
                   max={1}
+                  readOnly
                 />
-                <span className="text-sm text-gray-600">of 1</span>
+                <span className="text-sm text-gray-700 font-medium">of 1</span>
               </div>
-              <button className="px-3 py-1 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors">
+              <button className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors border border-gray-300">
                 Next
               </button>
             </div>

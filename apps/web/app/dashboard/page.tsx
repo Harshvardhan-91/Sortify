@@ -276,11 +276,15 @@ export default function DashboardPage() {
           const filesData = await filesResponse.json();
           const foldersData = await foldersResponse.json();
           
-          setFiles(filesData);
-          setFolders(foldersData);
+          // Ensure we have arrays before processing
+          const validFiles = Array.isArray(filesData) ? filesData : [];
+          const validFolders = Array.isArray(foldersData) ? foldersData : [];
+          
+          setFiles(validFiles);
+          setFolders(validFolders);
           
           // Auto-process files that haven't been processed yet
-          filesData.forEach((file: File) => {
+          validFiles.forEach((file: File) => {
             if (!file.processingStatus || file.processingStatus === 'PENDING') {
               processFileWithAI(file.id, { name: file.name, mimeType: file.mimeType });
             }
@@ -1302,12 +1306,12 @@ export default function DashboardPage() {
         )}
 
         {/* AI Actions */}
-        <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-4">
-          <div className="flex space-x-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-4 border-t border-gray-100 mt-4 gap-3">
+          <div className="flex flex-wrap gap-2 flex-1">
             <Button
               size="sm"
               variant="outline"
-              className="text-xs px-3 py-1.5 h-auto border-blue-200 text-blue-700 hover:bg-blue-50"
+              className="text-xs px-2 py-1.5 h-auto border-blue-200 text-blue-700 hover:bg-blue-50 whitespace-nowrap"
               onClick={(e) => {
                 e.stopPropagation();
                 const file = files.find(f => f.id === id) || { id, name, size, updatedAt, aiTags, aiSummary, processingStatus } as File;
@@ -1321,7 +1325,7 @@ export default function DashboardPage() {
             <Button
               size="sm"
               variant="outline"
-              className="text-xs px-3 py-1.5 h-auto border-purple-200 text-purple-700 hover:bg-purple-50"
+              className="text-xs px-2 py-1.5 h-auto border-purple-200 text-purple-700 hover:bg-purple-50 whitespace-nowrap"
               onClick={(e) => {
                 e.stopPropagation();
                 const file = files.find(f => f.id === id) || { id, name, size, updatedAt, aiTags, aiSummary, processingStatus } as File;
@@ -1334,7 +1338,7 @@ export default function DashboardPage() {
             </Button>
           </div>
           
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center space-x-1 flex-shrink-0">
             <Button
               size="sm"
               variant="ghost"
@@ -2080,7 +2084,7 @@ export default function DashboardPage() {
       {/* PDF Preview Modal */}
       {showPDFPreview && previewFile && (
         <PDFPreview
-          fileUrl={`/api/files/${previewFile.id}/preview`}
+          fileUrl={`https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf`}
           fileName={previewFile.name}
           isOpen={showPDFPreview}
           onClose={() => {

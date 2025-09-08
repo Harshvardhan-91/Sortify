@@ -46,7 +46,7 @@ export function S3FileUpload({
 
   const uploadToS3 = useCallback(async (file: globalThis.File) => {
     try {
-      // Step 1: Get signed upload URL
+      // Step 1: Get upload URL (local alternative to S3 signed URL)
       const response = await fetch(`${apiUrl}/upload-url`, {
         method: "POST",
         headers: {
@@ -64,17 +64,17 @@ export function S3FileUpload({
 
       const { uploadUrl, key } = await response.json();
 
-      // Step 2: Upload directly to S3
-      const uploadResponse = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: {
-          "Content-Type": file.type,
-        },
-        body: file,
+      // Step 2: Upload to local storage (alternative to S3)
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const uploadResponse = await fetch(`${apiUrl}/local-upload`, {
+        method: "POST",
+        body: formData,
       });
 
       if (!uploadResponse.ok) {
-        throw new Error("Failed to upload to S3");
+        throw new Error("Failed to upload file locally");
       }
 
       // Step 3: Confirm upload and save metadata

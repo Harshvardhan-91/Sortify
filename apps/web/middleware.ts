@@ -62,7 +62,7 @@ export async function middleware(request: NextRequest) {
     "camera=(), microphone=(), geolocation=()"
   );
 
-  // Add CSP header for additional security
+  // Add CSP header for additional security (v2 - updated for PDF iframe support)
   const cspHeader = `
     default-src 'self';
     script-src 'self' 'unsafe-eval' 'unsafe-inline' https://accounts.google.com;
@@ -70,7 +70,7 @@ export async function middleware(request: NextRequest) {
     img-src 'self' blob: data: https:;
     font-src 'self' https://fonts.gstatic.com;
     connect-src 'self' https://accounts.google.com;
-    frame-src https://accounts.google.com;
+    frame-src 'self' blob: data: https: https://accounts.google.com;
   `
     .replace(/\s{2,}/g, " ")
     .trim();
