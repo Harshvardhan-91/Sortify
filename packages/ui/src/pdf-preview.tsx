@@ -30,10 +30,10 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({
       
       {/* Modal Container */}
       <div className="fixed inset-0 flex items-center justify-center p-6">
-        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-7xl h-full max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-7xl h-full max-h-[95vh] flex flex-col overflow-hidden">
           
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white flex-shrink-0">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white flex-shrink-0">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
                 <span className="text-red-600 font-semibold text-xs">PDF</span>
@@ -99,32 +99,22 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({
           </div>
           
           {/* PDF Viewer */}
-          <div className="flex-1 bg-gray-50 overflow-hidden p-4">
+          <div className="flex-1 bg-gray-50 overflow-hidden p-6">
             <div className="h-full bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              {/* Since this is a demo, show a PDF placeholder with actual content */}
               <div className="h-full flex flex-col">
-                {/* Try to load PDF, but provide fallback */}
                 <div className="flex-1 relative">
-                  {/* PDF iframe - hidden initially since URL might not work */}
+                  {/* PDF iframe */}
                   <iframe
                     src={fileUrl}
-                    className="absolute inset-0 w-full h-full border-0 hidden"
+                    className="absolute inset-0 w-full h-full border-0"
                     title={fileName}
-                    onLoad={(e) => {
-                      // Show iframe if it loads successfully
-                      (e.target as HTMLIFrameElement).classList.remove('hidden');
-                      const fallback = (e.target as HTMLIFrameElement).nextElementSibling;
-                      if (fallback) fallback.classList.add('hidden');
-                    }}
-                    onError={() => {
-                      // Keep fallback visible if iframe fails
-                    }}
+                    style={{ display: 'block' }}
                   />
                   
-                  {/* Fallback PDF preview */}
-                  <div className="flex items-center justify-center h-full p-8">
-                    <div className="text-center max-w-md">
-                      <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  {/* Fallback for when PDF can't load */}
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 opacity-0 pointer-events-none" id="pdf-fallback">
+                    <div className="text-center max-w-md p-8">
+                      <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
                         <svg className="w-12 h-12 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                         </svg>

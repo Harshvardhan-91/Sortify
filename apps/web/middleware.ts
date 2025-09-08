@@ -53,8 +53,8 @@ export async function middleware(request: NextRequest) {
   // Add security headers for all responses
   const response = NextResponse.next();
 
-  // Add security headers
-  response.headers.set("X-Frame-Options", "DENY");
+  // Add security headers - allow same-origin iframe embedding for PDF preview
+  response.headers.set("X-Frame-Options", "SAMEORIGIN");
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set(

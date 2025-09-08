@@ -2084,7 +2084,7 @@ export default function DashboardPage() {
       {/* PDF Preview Modal */}
       {showPDFPreview && previewFile && (
         <PDFPreview
-          fileUrl={`https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf`}
+          fileUrl={previewFile.url || `/uploads/sample.pdf.html`}
           fileName={previewFile.name}
           isOpen={showPDFPreview}
           onClose={() => {
