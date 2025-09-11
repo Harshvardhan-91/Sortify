@@ -502,6 +502,8 @@ export default function HomePage() {
               <div className="flex items-center"><CheckCircle className="h-4 w-4 mr-2" />No credit card required</div>
             </div>
           </div>
+
+          
         </div>
       </section>
 
